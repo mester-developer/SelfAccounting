@@ -1,0 +1,100 @@
+import React, { useState } from 'react';
+import { Transaction, Loan, Cheque, Subscription, UserSettings } from '../types';
+import { formatCurrency, formatDate, toJalaliDate } from '../utils/formatters';
+import { Calendar as CalendarIcon, ChevronRight, ChevronLeft } from 'lucide-react';
+
+interface CalendarViewProps {
+  transactions: Transaction[];
+  loans: Loan[];
+  cheques: Cheque[];
+  subscriptions: Subscription[];
+  settings: UserSettings;
+}
+
+export const CalendarView: React.FC<CalendarViewProps> = ({
+  transactions,
+  loans,
+  cheques,
+  subscriptions,
+  settings,
+}) => {
+  const [currentMonth, setCurrentMonth] = useState('2026-07');
+
+  // Days in month mock (31 days)
+  const daysInMonth = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1;
+    const dayStr = day < 10 ? `0${day}` : `${day}`;
+    return `${currentMonth}-${dayStr}`;
+  });
+
+  return (
+    <div className="space-y-6 pb-20 lg:pb-8">
+      {/* Banner */}
+      <div className="flex items-center justify-between bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-xl">
+        <div>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <CalendarIcon className="w-5 h-5 text-indigo-400" />
+            تقویم رویدادهای مالی
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            بررسی روزانه درآمدها، هزینه‌ها و سررسید اقساط و چک‌ها
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-200">
+            {toJalaliDate(`${currentMonth}-01`)}
+          </span>
+        </div>
+      </div>
+
+      {/* Days Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+        {daysInMonth.map((dateIso) => {
+          const dayNum = dateIso.split('-')[2];
+          const dayTx = transactions.filter((t) => t.date === dateIso);
+          const dayIncome = dayTx
+            .filter((t) => t.type === 'income')
+            .reduce((s, t) => s + t.amount, 0);
+          const dayExpense = dayTx
+            .filter((t) => t.type === 'expense')
+            .reduce((s, t) => s + t.amount, 0);
+
+          const hasLoans = loans.some((l) => l.nextDueDate === dateIso);
+          const hasCheques = cheques.some((c) => c.dueDate === dateIso);
+
+          return (
+            <div
+              key={dateIso}
+              className={`p-3 rounded-2xl border text-xs min-h-[90px] flex flex-col justify-between transition-all backdrop-blur-md ${
+                dayTx.length > 0 || hasLoans || hasCheques
+                  ? 'bg-white/10 border-white/20 shadow-lg'
+                  : 'bg-white/5 border-white/10 opacity-80 hover:opacity-100'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="font-extrabold text-white">{dayNum}</span>
+                {hasCheques && (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50" title="سررسید چک" />
+                )}
+              </div>
+
+              <div className="space-y-0.5 text-[10px] dir-rtl font-semibold">
+                {dayIncome > 0 && (
+                  <span className="block text-emerald-400">
+                    +{formatCurrency(dayIncome, settings.currency)}
+                  </span>
+                )}
+                {dayExpense > 0 && (
+                  <span className="block text-rose-400">
+                    -{formatCurrency(dayExpense, settings.currency)}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
