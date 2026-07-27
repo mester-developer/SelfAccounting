@@ -1,29 +1,33 @@
 import React, { useState } from 'react';
-import { FinancialGoal, UserSettings } from '../types';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { FinancialGoal, Account, UserSettings, Transaction } from '../types';
+import { formatCurrency, formatDate, getTodayIso, toEnglishDigits } from '../utils/formatters';
 import { Plus, Target, Trash2, X, PlusCircle } from 'lucide-react';
 
 interface GoalsViewProps {
   goals: FinancialGoal[];
+  accounts?: Account[];
   settings: UserSettings;
   onAddGoal: (g: Omit<FinancialGoal, 'id'>) => void;
   onUpdateGoal: (g: FinancialGoal) => void;
   onDeleteGoal: (id: string) => void;
+  onAddTransaction?: (tx: Omit<Transaction, 'id'>) => void;
 }
 
 export const GoalsView: React.FC<GoalsViewProps> = ({
   goals = [],
+  accounts = [],
   settings,
   onAddGoal,
   onUpdateGoal,
   onDeleteGoal,
+  onAddTransaction,
 }) => {
   const safeGoals = goals || [];
+  const safeAccounts = accounts || [];
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [depositModalGoal, setDepositModalGoal] = useState<FinancialGoal | null>(
-    null
-  );
+  const [depositModalGoal, setDepositModalGoal] = useState<FinancialGoal | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState(safeAccounts[0]?.id || '');
 
   const [title, setTitle] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -34,11 +38,14 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
     e.preventDefault();
     if (!title || !targetAmount) return;
 
+    const parsedTarget = parseFloat(toEnglishDigits(targetAmount));
+    const parsedCurrent = parseFloat(toEnglishDigits(currentAmount)) || 0;
+
     onAddGoal({
       title,
-      targetAmount: parseFloat(targetAmount),
-      currentAmount: parseFloat(currentAmount) || 0,
-      targetDate: targetDate || '2027-03-20',
+      targetAmount: parsedTarget,
+      currentAmount: parsedCurrent,
+      targetDate: targetDate || getTodayIso(),
       category: 'purchase',
       icon: 'Target',
       color: '#10b981',
@@ -47,17 +54,33 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
     setIsModalOpen(false);
     setTitle('');
     setTargetAmount('');
+    setCurrentAmount('');
   };
 
   const handleDeposit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!depositModalGoal || !depositAmount) return;
 
-    const amt = parseFloat(depositAmount);
+    const amt = parseFloat(toEnglishDigits(depositAmount));
+    if (amt <= 0) return;
+
     onUpdateGoal({
       ...depositModalGoal,
       currentAmount: depositModalGoal.currentAmount + amt,
     });
+
+    // Deduct from account as a savings expense transaction
+    if (onAddTransaction && selectedAccountId) {
+      onAddTransaction({
+        type: 'expense',
+        amount: amt,
+        accountId: selectedAccountId,
+        categoryId: 'cat_investment_returns',
+        date: getTodayIso(),
+        note: `واریز به هدف پس‌انداز: ${depositModalGoal.title}`,
+        tags: ['پس‌انداز', 'هدف'],
+      });
+    }
 
     setDepositModalGoal(null);
     setDepositAmount('');
@@ -259,10 +282,27 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
             <form onSubmit={handleDeposit} className="space-y-3 text-xs">
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">
+                  کسر از حساب
+                </label>
+                <select
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 text-white font-medium focus:outline-none focus:border-indigo-400"
+                >
+                  {safeAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} ({formatCurrency(acc.balance, settings.currency)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
                   مبلغ واریزی (تومان)
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   placeholder="۵,۰۰۰,۰۰۰"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}

@@ -114,7 +114,15 @@ export const AiAdvisorView: React.FC<AiAdvisorViewProps> = ({
     setIsChatSending(true);
 
     try {
+      const currentMonthPrefix = new Date().toISOString().substring(0, 7);
       const netWorth = accounts.reduce((acc, curr) => acc + curr.balance, 0);
+      const monthlyIncome = transactions
+        .filter((t) => t.date.startsWith(currentMonthPrefix) && t.type === 'income')
+        .reduce((s, t) => s + t.amount, 0);
+      const monthlyExpense = transactions
+        .filter((t) => t.date.startsWith(currentMonthPrefix) && t.type === 'expense')
+        .reduce((s, t) => s + t.amount, 0);
+
       const res = await fetch('/api/ai/financial-advisor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,8 +130,8 @@ export const AiAdvisorView: React.FC<AiAdvisorViewProps> = ({
           message: userText,
           financialSnapshot: {
             netWorth,
-            monthlyIncome: 38000000,
-            monthlyExpense: 17300000,
+            monthlyIncome,
+            monthlyExpense,
           },
         }),
       });

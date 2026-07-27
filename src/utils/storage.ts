@@ -520,7 +520,7 @@ export const StorageAPI = {
     const updatedAccounts = accounts.map((acc) => {
       if (acc.id === tx.accountId) {
         if (tx.type === 'expense') return { ...acc, balance: acc.balance - tx.amount };
-        if (tx.type === 'income') return { ...acc, balance: acc.balance + tx.amount };
+        if (tx.type === 'income' || tx.type === 'refund') return { ...acc, balance: acc.balance + tx.amount };
         if (tx.type === 'transfer') return { ...acc, balance: acc.balance - tx.amount };
       }
       if (tx.type === 'transfer' && targetAccId && acc.id === targetAccId) {
@@ -532,8 +532,68 @@ export const StorageAPI = {
 
     return updated;
   },
+
+  updateTransaction(tx: Transaction): Transaction[] {
+    const list = this.getTransactions();
+    const oldTx = list.find((t) => t.id === tx.id);
+    if (!oldTx) return list;
+
+    // First revert old transaction effect
+    let accounts = this.getAccounts();
+    const oldTargetAccId = oldTx.toAccountId || oldTx.targetAccountId;
+    accounts = accounts.map((acc) => {
+      if (acc.id === oldTx.accountId) {
+        if (oldTx.type === 'expense') return { ...acc, balance: acc.balance + oldTx.amount };
+        if (oldTx.type === 'income' || oldTx.type === 'refund') return { ...acc, balance: acc.balance - oldTx.amount };
+        if (oldTx.type === 'transfer') return { ...acc, balance: acc.balance + oldTx.amount };
+      }
+      if (oldTx.type === 'transfer' && oldTargetAccId && acc.id === oldTargetAccId) {
+        return { ...acc, balance: acc.balance - oldTx.amount };
+      }
+      return acc;
+    });
+
+    // Apply new transaction effect
+    const newTargetAccId = tx.toAccountId || tx.targetAccountId;
+    accounts = accounts.map((acc) => {
+      if (acc.id === tx.accountId) {
+        if (tx.type === 'expense') return { ...acc, balance: acc.balance - tx.amount };
+        if (tx.type === 'income' || tx.type === 'refund') return { ...acc, balance: acc.balance + tx.amount };
+        if (tx.type === 'transfer') return { ...acc, balance: acc.balance - tx.amount };
+      }
+      if (tx.type === 'transfer' && newTargetAccId && acc.id === newTargetAccId) {
+        return { ...acc, balance: acc.balance + tx.amount };
+      }
+      return acc;
+    });
+    this.saveAccounts(accounts);
+
+    const updated = list.map((t) => (t.id === tx.id ? tx : t));
+    this.saveTransactions(updated);
+    return updated;
+  },
+
   deleteTransaction(id: string): Transaction[] {
-    const updated = this.getTransactions().filter((t) => t.id !== id);
+    const list = this.getTransactions();
+    const targetTx = list.find((t) => t.id === id);
+    if (targetTx) {
+      const accounts = this.getAccounts();
+      const targetAccId = targetTx.toAccountId || targetTx.targetAccountId;
+      const updatedAccounts = accounts.map((acc) => {
+        if (acc.id === targetTx.accountId) {
+          if (targetTx.type === 'expense') return { ...acc, balance: acc.balance + targetTx.amount };
+          if (targetTx.type === 'income' || targetTx.type === 'refund') return { ...acc, balance: acc.balance - targetTx.amount };
+          if (targetTx.type === 'transfer') return { ...acc, balance: acc.balance + targetTx.amount };
+        }
+        if (targetTx.type === 'transfer' && targetAccId && acc.id === targetAccId) {
+          return { ...acc, balance: acc.balance - targetTx.amount };
+        }
+        return acc;
+      });
+      this.saveAccounts(updatedAccounts);
+    }
+
+    const updated = list.filter((t) => t.id !== id);
     this.saveTransactions(updated);
     return updated;
   },
@@ -558,6 +618,12 @@ export const StorageAPI = {
     this.saveDebts(updated);
     return updated;
   },
+  updateDebt(d: Debt): Debt[] {
+    const list = this.getDebts();
+    const updated = list.map((item) => (item.id === d.id ? d : item));
+    this.saveDebts(updated);
+    return updated;
+  },
   deleteDebt(id: string): Debt[] {
     const updated = this.getDebts().filter((d) => d.id !== id);
     this.saveDebts(updated);
@@ -568,6 +634,12 @@ export const StorageAPI = {
     const list = this.getLoans();
     const newL: Loan = { ...l, id: `l_${Date.now()}` };
     const updated = [newL, ...list];
+    this.saveLoans(updated);
+    return updated;
+  },
+  updateLoan(l: Loan): Loan[] {
+    const list = this.getLoans();
+    const updated = list.map((item) => (item.id === l.id ? l : item));
     this.saveLoans(updated);
     return updated;
   },
@@ -668,17 +740,19 @@ export const StorageAPI = {
   importBackupJSON(jsonString: string): boolean {
     try {
       const parsed = JSON.parse(jsonString);
-      if (parsed.accounts) this.saveAccounts(parsed.accounts);
-      if (parsed.transactions) this.saveTransactions(parsed.transactions);
-      if (parsed.categories) this.saveCategories(parsed.categories);
-      if (parsed.budgets) this.saveBudgets(parsed.budgets);
-      if (parsed.debts) this.saveDebts(parsed.debts);
-      if (parsed.loans) this.saveLoans(parsed.loans);
-      if (parsed.cheques) this.saveCheques(parsed.cheques);
-      if (parsed.goals) this.saveGoals(parsed.goals);
-      if (parsed.subscriptions) this.saveSubscriptions(parsed.subscriptions);
-      if (parsed.investments) this.saveInvestments(parsed.investments);
-      if (parsed.settings) this.saveSettings(parsed.settings);
+      if (!parsed || typeof parsed !== 'object') return false;
+
+      if (Array.isArray(parsed.accounts)) this.saveAccounts(parsed.accounts);
+      if (Array.isArray(parsed.transactions)) this.saveTransactions(parsed.transactions);
+      if (Array.isArray(parsed.categories)) this.saveCategories(parsed.categories);
+      if (Array.isArray(parsed.budgets)) this.saveBudgets(parsed.budgets);
+      if (Array.isArray(parsed.debts)) this.saveDebts(parsed.debts);
+      if (Array.isArray(parsed.loans)) this.saveLoans(parsed.loans);
+      if (Array.isArray(parsed.cheques)) this.saveCheques(parsed.cheques);
+      if (Array.isArray(parsed.goals)) this.saveGoals(parsed.goals);
+      if (Array.isArray(parsed.subscriptions)) this.saveSubscriptions(parsed.subscriptions);
+      if (Array.isArray(parsed.investments)) this.saveInvestments(parsed.investments);
+      if (parsed.settings && typeof parsed.settings === 'object') this.saveSettings(parsed.settings);
       return true;
     } catch (e) {
       return false;

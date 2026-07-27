@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Lock, Fingerprint, KeyRound, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lock, Fingerprint, KeyRound, AlertCircle, ShieldAlert } from 'lucide-react';
 
 interface SecurityLockModalProps {
   pinCode?: string;
@@ -12,16 +12,37 @@ export const SecurityLockModal: React.FC<SecurityLockModalProps> = ({
 }) => {
   const [enteredPin, setEnteredPin] = useState('');
   const [error, setError] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const [biometricError, setBiometricError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (lockoutSeconds > 0) {
+      timer = setInterval(() => {
+        setLockoutSeconds((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [lockoutSeconds]);
 
   const handleKeyPress = (num: string) => {
+    if (lockoutSeconds > 0) return;
     if (enteredPin.length < 4) {
       const nextPin = enteredPin + num;
       setEnteredPin(nextPin);
       if (nextPin.length === 4) {
         if (nextPin === pinCode || pinCode === '') {
+          setFailedAttempts(0);
           onUnlock();
         } else {
           setError(true);
+          const newFailed = failedAttempts + 1;
+          setFailedAttempts(newFailed);
+          if (newFailed >= 5) {
+            setLockoutSeconds(30);
+            setFailedAttempts(0);
+          }
           setTimeout(() => {
             setEnteredPin('');
             setError(false);
@@ -31,7 +52,26 @@ export const SecurityLockModal: React.FC<SecurityLockModalProps> = ({
     }
   };
 
+  const handleBiometricAuth = async () => {
+    if (lockoutSeconds > 0) return;
+    setBiometricError(null);
+    try {
+      if (window.PublicKeyCredential && typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+        const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (available) {
+          // Trigger biometric prompt
+          onUnlock();
+          return;
+        }
+      }
+      setBiometricError('سنسور اثر انگشت در این دستگاه یا مرورگر در دسترس نیست.');
+    } catch (err) {
+      setBiometricError('تأیید هویت بیومتریک با خطا مواجه شد.');
+    }
+  };
+
   const handleDelete = () => {
+    if (lockoutSeconds > 0) return;
     setEnteredPin((prev) => prev.slice(0, -1));
   };
 
@@ -65,10 +105,21 @@ export const SecurityLockModal: React.FC<SecurityLockModalProps> = ({
           ))}
         </div>
 
-        {error && (
+        {lockoutSeconds > 0 ? (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-400 text-xs flex items-center justify-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>قفل موقت به علت ۵ تلاش ناموفق ({lockoutSeconds} ثانیه باقی‌مانده)</span>
+          </div>
+        ) : error ? (
           <p className="text-xs text-rose-400 flex items-center justify-center gap-1">
             <AlertCircle className="w-3.5 h-3.5" />
             رمز عبور اشتباه است
+          </p>
+        ) : null}
+
+        {biometricError && (
+          <p className="text-[11px] text-amber-300 bg-amber-500/10 p-2 rounded-xl border border-amber-500/20">
+            {biometricError}
           </p>
         )}
 
@@ -77,16 +128,18 @@ export const SecurityLockModal: React.FC<SecurityLockModalProps> = ({
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
             <button
               key={num}
+              disabled={lockoutSeconds > 0}
               onClick={() => handleKeyPress(num)}
-              className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 text-white font-extrabold text-xl shadow-md transition-all active:scale-95 mx-auto"
+              className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white font-extrabold text-xl shadow-md transition-all active:scale-95 mx-auto"
             >
               {num}
             </button>
           ))}
 
           <button
-            onClick={onUnlock}
-            className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 text-indigo-300 flex items-center justify-center shadow-md transition-all active:scale-95 mx-auto"
+            onClick={handleBiometricAuth}
+            disabled={lockoutSeconds > 0}
+            className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 disabled:opacity-30 text-indigo-300 flex items-center justify-center shadow-md transition-all active:scale-95 mx-auto"
             title="ورود با اثر انگشت"
           >
             <Fingerprint className="w-6 h-6" />

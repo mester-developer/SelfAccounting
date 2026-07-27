@@ -119,6 +119,10 @@ export function App() {
     const updated = StorageAPI.addDebt(d);
     setDebts(updated);
   };
+  const handleUpdateDebt = (d: Debt) => {
+    const updated = StorageAPI.updateDebt(d);
+    setDebts(updated);
+  };
   const handleDeleteDebt = (id: string) => {
     const updated = StorageAPI.deleteDebt(id);
     setDebts(updated);
@@ -127,6 +131,10 @@ export function App() {
   // Loan Handlers
   const handleAddLoan = (l: Omit<Loan, 'id'>) => {
     const updated = StorageAPI.addLoan(l);
+    setLoans(updated);
+  };
+  const handleUpdateLoan = (l: Loan) => {
+    const updated = StorageAPI.updateLoan(l);
     setLoans(updated);
   };
   const handleDeleteLoan = (id: string) => {
@@ -261,6 +269,8 @@ export function App() {
               categories={categories}
               budgets={budgets}
               goals={goals}
+              debts={debts}
+              loans={loans}
               settings={settings}
               onNavigateTab={setActiveTab}
               onOpenAddTxModal={(type) => {
@@ -312,6 +322,8 @@ export function App() {
               onAddDebt={handleAddDebt}
               onAddLoan={handleAddLoan}
               onAddCheque={handleAddCheque}
+              onUpdateDebt={handleUpdateDebt}
+              onUpdateLoan={handleUpdateLoan}
               onDeleteDebt={handleDeleteDebt}
               onDeleteLoan={handleDeleteLoan}
               onDeleteCheque={handleDeleteCheque}
@@ -321,10 +333,12 @@ export function App() {
           {activeTab === 'goals' && (
             <GoalsView
               goals={goals}
+              accounts={accounts}
               settings={settings}
               onAddGoal={handleAddGoal}
               onUpdateGoal={handleUpdateGoal}
               onDeleteGoal={handleDeleteGoal}
+              onAddTransaction={handleAddTransaction}
             />
           )}
 

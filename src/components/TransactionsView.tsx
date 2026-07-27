@@ -135,11 +135,22 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     safeAccounts.find((a) => a.id === accId) || { name: 'حساب ناشناخته' };
 
   // Export CSV helper
+  const escapeCsvCell = (val: any) => {
+    let str = String(val ?? '');
+    // Sanitize CSV formula injection (=, +, -, @, \t, \r)
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = `'` + str;
+    }
+    // Escape quotes
+    str = str.replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
   const handleExportCSV = () => {
     const headers = ['شناسه', 'نوع', 'مبلغ', 'حساب', 'دسته‌بندی', 'تاریخ', 'یادداشت'];
     const rows = filteredTransactions.map((tx) => [
       tx.id,
-      tx.type,
+      tx.type === 'expense' ? 'هزینه' : tx.type === 'income' ? 'درآمد' : tx.type === 'refund' ? 'استرداد' : 'انتقال',
       tx.amount,
       getAccount(tx.accountId).name,
       getCategory(tx.categoryId).name,
@@ -149,7 +160,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
     const csvContent =
       'data:text/csv;charset=utf-8,\uFEFF' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+      [headers.map(escapeCsvCell).join(','), ...rows.map((row) => row.map(escapeCsvCell).join(','))].join('\n');
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');

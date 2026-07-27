@@ -11,6 +11,32 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
 
+// Rate Limiter for AI endpoints
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const aiRateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const ip = req.ip || req.socket.remoteAddress || "127.0.0.1";
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxRequests = 20;
+
+  const record = rateLimitMap.get(ip);
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
+    return next();
+  }
+
+  if (record.count >= maxRequests) {
+    return res.status(429).json({
+      error: "تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً یک دقیقه دیگر مجدداً تلاش کنید.",
+    });
+  }
+
+  record.count += 1;
+  next();
+};
+
+app.use("/api/ai/*", aiRateLimiter);
+
 // Initialize Gemini client lazily
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY;

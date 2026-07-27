@@ -1,5 +1,22 @@
 import * as jalaali from 'jalaali-js';
 
+// Convert Persian and Arabic digits to English digits for numeric input handling
+export function toEnglishDigits(str: string | number): string {
+  if (str === null || str === undefined) return '';
+  const s = String(str);
+  return s
+    .replace(/[۰٠]/g, '0')
+    .replace(/[۱١]/g, '1')
+    .replace(/[۲٢]/g, '2')
+    .replace(/[۳٣]/g, '3')
+    .replace(/[۴٤]/g, '4')
+    .replace(/[۵٥]/g, '5')
+    .replace(/[۶٦]/g, '6')
+    .replace(/[۷٧]/g, '7')
+    .replace(/[۸٨]/g, '8')
+    .replace(/[۹٩]/g, '9');
+}
+
 // Convert English numbers to Persian digits
 export function toPersianDigits(str: string | number): string {
   if (str === null || str === undefined) return '';

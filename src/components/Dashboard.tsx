@@ -5,6 +5,8 @@ import {
   Category,
   Budget,
   FinancialGoal,
+  Debt,
+  Loan,
   UserSettings,
 } from '../types';
 import { formatCurrency, formatDate, getTodayIso } from '../utils/formatters';
@@ -31,6 +33,8 @@ interface DashboardProps {
   categories: Category[];
   budgets: Budget[];
   goals: FinancialGoal[];
+  debts?: Debt[];
+  loans?: Loan[];
   settings: UserSettings;
   onNavigateTab: (tabId: string) => void;
   onOpenAddTxModal: (type?: 'income' | 'expense' | 'transfer') => void;
@@ -42,6 +46,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   categories = [],
   budgets = [],
   goals = [],
+  debts = [],
+  loans = [],
   settings,
   onNavigateTab,
   onOpenAddTxModal,
@@ -51,12 +57,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const safeCategories = categories || [];
   const safeBudgets = budgets || [];
   const safeGoals = goals || [];
+  const safeDebts = debts || [];
+  const safeLoans = loans || [];
 
   const todayIso = getTodayIso();
   const currentMonthPrefix = (todayIso || '').substring(0, 7); // e.g. 2026-07
 
-  // Total Net Worth
-  const totalNetWorth = safeAccounts.reduce((acc, curr) => acc + (curr?.balance || 0), 0);
+  // Liabilities and Net Worth
+  const accountBalances = safeAccounts.reduce((acc, curr) => acc + (curr?.balance || 0), 0);
+  const debtorClaims = safeDebts.filter((d) => d.type === 'debtor').reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
+  const creditorDebts = safeDebts.filter((d) => d.type === 'creditor').reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
+  const remainingLoans = safeLoans.reduce((sum, l) => sum + l.remainingAmount, 0);
+
+  const totalNetWorth = accountBalances + debtorClaims - creditorDebts - remainingLoans;
 
   // Income & Expense Today
   const todayIncome = safeTransactions

@@ -31,11 +31,14 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [parsedData, setParsedData] = useState<any>(null);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setErrorMsg(null);
       const reader = new FileReader();
       reader.onload = (evt) => {
         const dataUrl = evt.target?.result as string;
@@ -48,6 +51,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
 
   const scanReceipt = async (dataUrl: string) => {
     setIsScanning(true);
+    setErrorMsg(null);
     try {
       const base64Data = dataUrl.split(',')[1];
       const res = await fetch('/api/ai/scan-receipt', {
@@ -65,15 +69,10 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
 
       const data = await res.json();
       setParsedData(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      // Fallback parsed response simulation
-      setParsedData({
-        amount: 345000,
-        merchantName: 'فروشگاه افق کوروش',
-        description: 'خرید خواروبار و مواد غذایی',
-        date: new Date().toISOString().split('T')[0],
-      });
+      setErrorMsg('استخراج هوشمند اطلاعات فاکتور ناموفق بود. لطفاً تصویر خواناتری بارگذاری کنید یا اطلاعات را دستی وارد کنید.');
+      setParsedData(null);
     } finally {
       setIsScanning(false);
     }
@@ -149,6 +148,12 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
                 </div>
               )}
             </div>
+
+            {errorMsg && (
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs text-center font-medium">
+                {errorMsg}
+              </div>
+            )}
 
             {parsedData && !isScanning && (
               <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs space-y-2">

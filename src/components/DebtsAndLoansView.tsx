@@ -22,6 +22,8 @@ interface DebtsAndLoansViewProps {
   onAddDebt: (d: Omit<Debt, 'id'>) => void;
   onAddLoan: (l: Omit<Loan, 'id'>) => void;
   onAddCheque: (c: Omit<Cheque, 'id'>) => void;
+  onUpdateDebt?: (d: Debt) => void;
+  onUpdateLoan?: (l: Loan) => void;
   onDeleteDebt: (id: string) => void;
   onDeleteLoan: (id: string) => void;
   onDeleteCheque: (id: string) => void;
@@ -35,6 +37,8 @@ export const DebtsAndLoansView: React.FC<DebtsAndLoansViewProps> = ({
   onAddDebt,
   onAddLoan,
   onAddCheque,
+  onUpdateDebt,
+  onUpdateLoan,
   onDeleteDebt,
   onDeleteLoan,
   onDeleteCheque,
@@ -255,6 +259,29 @@ export const DebtsAndLoansView: React.FC<DebtsAndLoansViewProps> = ({
                     «{d.description}»
                   </p>
                 )}
+
+                {onUpdateDebt && d.paidAmount < d.totalAmount && (
+                  <button
+                    onClick={() => {
+                      const amountStr = prompt('مبلغ پرداختی جدید (تومان):', (d.totalAmount - d.paidAmount).toString());
+                      if (amountStr) {
+                        const amt = parseFloat(amountStr);
+                        if (!isNaN(amt) && amt > 0) {
+                          const newPaid = d.paidAmount + amt;
+                          onUpdateDebt({
+                            ...d,
+                            paidAmount: newPaid,
+                            status: newPaid >= d.totalAmount ? 'settled' : 'active',
+                          });
+                        }
+                      }
+                    }}
+                    className="w-full py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-semibold text-xs border border-indigo-500/30 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                    ثبت پرداخت / تسویه بدهی
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -338,6 +365,24 @@ export const DebtsAndLoansView: React.FC<DebtsAndLoansViewProps> = ({
                         />
                       </div>
                     </div>
+
+                    {onUpdateLoan && l.paidInstallments < l.totalInstallments && (
+                      <button
+                        onClick={() => {
+                          const newPaid = l.paidInstallments + 1;
+                          const newRem = Math.max(0, l.remainingAmount - l.monthlyInstallment);
+                          onUpdateLoan({
+                            ...l,
+                            paidInstallments: newPaid,
+                            remainingAmount: newRem,
+                          });
+                        }}
+                        className="w-full py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        پرداخت یک قسط (+۱)
+                      </button>
+                    )}
                   </div>
                 </div>
               );

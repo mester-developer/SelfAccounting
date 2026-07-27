@@ -3,7 +3,7 @@ import {
   Bell,
   Lock,
   Plus,
-  ScanLine,
+  Sparkles,
   Search,
   Moon,
   Sun,
@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => onTabChange('ai_advisor')}
           className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-medium transition-all"
         >
-          <ScanLine className="w-4 h-4 text-indigo-300" />
+          <Sparkles className="w-4 h-4 text-indigo-300" />
           <span className="hidden md:inline">مشاور هوشمند</span>
         </button>
       </div>
