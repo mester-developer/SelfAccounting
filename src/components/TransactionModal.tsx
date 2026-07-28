@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Account, Category, Transaction, UserSettings } from '../types';
-import { getTodayIso } from '../utils/formatters';
-import { X, Plus, ArrowRightLeft, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { getTodayIso, toEnglishDigits } from '../utils/formatters';
+import { AmountInput } from './AmountInput';
+import { X, Plus, ArrowRightLeft, ArrowDownRight, ArrowUpRight, Edit3 } from 'lucide-react';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -10,7 +11,9 @@ interface TransactionModalProps {
   categories: Category[];
   settings: UserSettings;
   onAddTransaction: (tx: Omit<Transaction, 'id'>) => void;
+  onUpdateTransaction?: (tx: Transaction) => void;
   initialType?: 'expense' | 'income' | 'transfer';
+  editTransaction?: Transaction | null;
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -20,15 +23,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   categories,
   settings,
   onAddTransaction,
+  onUpdateTransaction,
   initialType = 'expense',
+  editTransaction = null,
 }) => {
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>(initialType);
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setType(initialType);
-    }
-  }, [isOpen, initialType]);
   const [amount, setAmount] = useState('');
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
   const [toAccountId, setToAccountId] = useState(accounts[1]?.id || accounts[0]?.id || '');
@@ -37,28 +36,66 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [description, setDescription] = useState('');
   const [tagsInput, setTagsInput] = useState('');
 
+  React.useEffect(() => {
+    if (isOpen) {
+      if (editTransaction) {
+        setType(editTransaction.type === 'refund' ? 'income' : editTransaction.type);
+        setAmount(String(editTransaction.amount));
+        setAccountId(editTransaction.accountId);
+        setToAccountId(editTransaction.toAccountId || editTransaction.targetAccountId || accounts[1]?.id || accounts[0]?.id || '');
+        setCategoryId(editTransaction.categoryId || categories[0]?.id || '');
+        setDate(editTransaction.date);
+        setDescription(editTransaction.description || editTransaction.note || '');
+        setTagsInput((editTransaction.tags || []).join(', '));
+      } else {
+        setType(initialType);
+        setAmount('');
+        setAccountId(accounts[0]?.id || '');
+        setToAccountId(accounts[1]?.id || accounts[0]?.id || '');
+        setCategoryId(categories[0]?.id || '');
+        setDate(getTodayIso());
+        setDescription('');
+        setTagsInput('');
+      }
+    }
+  }, [isOpen, initialType, editTransaction, accounts, categories]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || parseFloat(amount) <= 0) return;
+    const cleanAmt = parseFloat(toEnglishDigits(amount));
+    if (!cleanAmt || cleanAmt <= 0) return;
 
-    const parsedAmount = parseFloat(amount);
     const tags = tagsInput
       .split(',')
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
 
-    onAddTransaction({
-      type,
-      amount: parsedAmount,
-      accountId,
-      toAccountId: type === 'transfer' ? toAccountId : undefined,
-      categoryId: type === 'transfer' ? undefined : categoryId,
-      date,
-      description,
-      tags,
-    });
+    if (editTransaction && onUpdateTransaction) {
+      onUpdateTransaction({
+        ...editTransaction,
+        type,
+        amount: cleanAmt,
+        accountId,
+        toAccountId: type === 'transfer' ? toAccountId : undefined,
+        categoryId: type === 'transfer' ? undefined : categoryId,
+        date,
+        description,
+        tags,
+      });
+    } else {
+      onAddTransaction({
+        type,
+        amount: cleanAmt,
+        accountId,
+        toAccountId: type === 'transfer' ? toAccountId : undefined,
+        categoryId: type === 'transfer' ? undefined : categoryId,
+        date,
+        description,
+        tags,
+      });
+    }
 
     setAmount('');
     setDescription('');
@@ -72,7 +109,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl p-6 w-full max-w-lg text-slate-100 space-y-4 shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <h3 className="font-bold text-sm text-white">ثبت تراکنش جدید</h3>
+          <h3 className="font-bold text-sm text-white flex items-center gap-2">
+            {editTransaction ? (
+              <>
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                ویرایش تراکنش
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 text-indigo-400" />
+                ثبت تراکنش جدید
+              </>
+            )}
+          </h3>
           <button
             onClick={onClose}
             className="p-1.5 rounded-xl bg-white/10 text-slate-400 hover:text-white border border-white/10"
@@ -122,19 +171,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          {/* Amount */}
+          {/* Amount with Comma Formatter */}
           <div>
             <label className="block text-slate-300 font-semibold mb-1">
-              مبلغ (تومان)
+              مبلغ ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
             </label>
-            <input
-              type="number"
-              placeholder="مثلا ۵۰۰,۰۰۰"
+            <AmountInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
+              onChange={setAmount}
+              placeholder="مثلا ۵۰۰,۰۰۰"
               autoFocus
-              className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-white/10 text-white text-base font-extrabold placeholder-slate-500 focus:outline-none focus:border-indigo-400"
             />
           </div>
 
@@ -256,7 +302,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               type="submit"
               className="w-full py-3.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold transition-all shadow-lg shadow-indigo-500/25"
             >
-              ثبت تراکنش
+              {editTransaction ? 'بروزرسانی تراکنش' : 'ثبت تراکنش'}
             </button>
           </div>
         </form>
@@ -264,3 +310,4 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     </div>
   );
 };
+

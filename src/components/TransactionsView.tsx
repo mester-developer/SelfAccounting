@@ -6,8 +6,9 @@ import {
   UserSettings,
   TransactionType,
 } from '../types';
-import { formatCurrency, formatDate, getTodayIso } from '../utils/formatters';
+import { formatCurrency, formatDate, getTodayIso, toEnglishDigits } from '../utils/formatters';
 import { DynamicIcon } from './DynamicIcon';
+import { AmountInput } from './AmountInput';
 import {
   Plus,
   Search,
@@ -16,6 +17,7 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   Trash2,
+  Edit3,
   Image as ImageIcon,
   ScanLine,
   Download,
@@ -32,6 +34,7 @@ interface TransactionsViewProps {
   categories: Category[];
   settings: UserSettings;
   onAddTransaction: (tx: Omit<Transaction, 'id'>) => void;
+  onUpdateTransaction?: (tx: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
   onOpenReceiptScanner: () => void;
 }
@@ -42,6 +45,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   categories = [],
   settings,
   onAddTransaction,
+  onUpdateTransaction,
   onDeleteTransaction,
   onOpenReceiptScanner,
 }) => {
@@ -54,8 +58,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
-  // Add Transaction Modal State
+  // Transaction Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState<string>('');
   const [accountId, setAccountId] = useState<string>(safeAccounts[0]?.id || '');
@@ -73,6 +78,34 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   >('monthly');
   const [receiptImage, setReceiptImage] = useState<string | undefined>(undefined);
 
+  const openAddModal = () => {
+    setEditingTx(null);
+    setType('expense');
+    setAmount('');
+    setAccountId(safeAccounts[0]?.id || '');
+    setTargetAccountId(safeAccounts[1]?.id || '');
+    setCategoryId(safeCategories[0]?.id || '');
+    setDate(getTodayIso());
+    setNote('');
+    setTags([]);
+    setIsRecurring(false);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (tx: Transaction) => {
+    setEditingTx(tx);
+    setType(tx.type === 'refund' ? 'income' : tx.type);
+    setAmount(tx.amount.toString());
+    setAccountId(tx.accountId);
+    setTargetAccountId(tx.targetAccountId || tx.toAccountId || safeAccounts[1]?.id || '');
+    setCategoryId(tx.categoryId || safeCategories[0]?.id || '');
+    setDate(tx.date);
+    setNote(tx.note || tx.description || '');
+    setTags(tx.tags || []);
+    setIsRecurring(Boolean(tx.isRecurring));
+    setIsModalOpen(true);
+  };
+
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()]);
@@ -86,26 +119,47 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || parseFloat(amount) <= 0) return;
+    const cleanAmt = parseFloat(toEnglishDigits(amount));
+    if (!cleanAmt || cleanAmt <= 0) return;
 
-    onAddTransaction({
-      type,
-      amount: parseFloat(amount),
-      accountId,
-      targetAccountId: type === 'transfer' ? targetAccountId : undefined,
-      categoryId,
-      date,
-      note,
-      tags,
-      isRecurring,
-      recurringInterval: isRecurring ? recurringInterval : undefined,
-      receiptImage,
-    });
+    if (editingTx && onUpdateTransaction) {
+      onUpdateTransaction({
+        ...editingTx,
+        type,
+        amount: cleanAmt,
+        accountId,
+        targetAccountId: type === 'transfer' ? targetAccountId : undefined,
+        categoryId: type === 'transfer' ? undefined : categoryId,
+        date,
+        note,
+        description: note,
+        tags,
+        isRecurring,
+        recurringInterval: isRecurring ? recurringInterval : undefined,
+        receiptImage,
+      });
+    } else {
+      onAddTransaction({
+        type,
+        amount: cleanAmt,
+        accountId,
+        targetAccountId: type === 'transfer' ? targetAccountId : undefined,
+        categoryId: type === 'transfer' ? undefined : categoryId,
+        date,
+        note,
+        description: note,
+        tags,
+        isRecurring,
+        recurringInterval: isRecurring ? recurringInterval : undefined,
+        receiptImage,
+      });
+    }
 
     // Reset Form
     setAmount('');
     setNote('');
     setTags([]);
+    setEditingTx(null);
     setIsModalOpen(false);
   };
 
@@ -192,7 +246,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </button>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium shadow-lg shadow-indigo-500/25 transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
@@ -352,6 +406,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     </div>
 
                     <button
+                      onClick={() => openEditModal(tx)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors"
+                      title="ویرایش تراکنش"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    <button
                       onClick={() => onDeleteTransaction(tx.id)}
                       className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
                       title="حذف تراکنش"
@@ -371,7 +433,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl p-6 w-full max-w-lg shadow-2xl text-slate-100 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="font-bold text-sm text-white">ثبت تراکنش جدید</h3>
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                {editingTx ? 'ویرایش تراکنش' : 'ثبت تراکنش جدید'}
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white border border-white/10"
@@ -421,15 +485,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               {/* Amount Input */}
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">
-                  مبلغ (تومان / واحد)
+                  مبلغ ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                 </label>
-                <input
-                  type="number"
-                  placeholder="مثلا ۱,۵۰۰,۰۰۰"
+                <AmountInput
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 text-sm font-extrabold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                  onChange={setAmount}
+                  placeholder="مثلا ۱,۵۰۰,۰۰۰"
                 />
               </div>
 

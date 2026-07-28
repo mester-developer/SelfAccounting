@@ -111,23 +111,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const getAccount = (accId: string) =>
     safeAccounts.find((a) => a?.id === accId) || { name: 'حساب ناشناخته' };
 
+  const isLight = settings?.theme === 'light';
+
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
       {/* Net Worth & Main KPIs Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 shadow-2xl text-slate-100">
+      <div className={`relative overflow-hidden rounded-3xl border p-6 shadow-xl transition-colors duration-200 ${
+        isLight
+          ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
+          : 'bg-slate-900 border-white/10 text-slate-100 shadow-2xl'
+      }`}>
         <div className="absolute top-0 left-0 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl -ml-20 -mt-20 pointer-events-none" />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-1">
-              <Wallet className="w-4 h-4 text-indigo-400" />
-              موجودی کل دارایی‌ها
+            <div className={`flex items-center gap-2 text-xs font-semibold mb-1 ${
+              isLight ? 'text-slate-500' : 'text-slate-400'
+            }`}>
+              <Wallet className="w-4 h-4 text-indigo-500" />
+              موجودی کل دارایی‌ها (خالص دارایی)
             </div>
-            <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            <div className={`text-3xl md:text-4xl font-extrabold tracking-tight ${
+              isLight ? 'text-slate-900' : 'text-white'
+            }`}>
               {formatCurrency(totalNetWorth, settings.currency)}
             </div>
-            <p className="text-xs text-slate-400 mt-2 font-light">
-              محاسبه‌شده بر اساس مجموع {accounts.length} حساب فعال
+            <p className={`text-xs mt-2 font-light flex flex-wrap items-center gap-2 ${
+              isLight ? 'text-slate-600' : 'text-slate-400'
+            }`}>
+              <span>مجموع حساب‌ها: {formatCurrency(accountBalances, settings.currency)}</span>
+              {(creditorDebts > 0 || remainingLoans > 0) && (
+                <span className="text-rose-500 font-medium">
+                  | بدهی و وام: {formatCurrency(creditorDebts + remainingLoans, settings.currency)}-
+                </span>
+              )}
+              {debtorClaims > 0 && (
+                <span className="text-emerald-500 font-medium">
+                  | طلب‌ها: {formatCurrency(debtorClaims, settings.currency)}+
+                </span>
+              )}
             </p>
           </div>
 
@@ -158,33 +180,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Today & Month Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10 relative z-10">
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <span className="text-[11px] text-slate-400 block mb-1">درآمد امروز</span>
-            <span className="text-sm md:text-base font-bold text-emerald-400 flex items-center gap-1">
+        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t relative z-10 ${
+          isLight ? 'border-slate-200' : 'border-white/10'
+        }`}>
+          <div className={`p-3.5 rounded-2xl border backdrop-blur-md ${
+            isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
+          }`}>
+            <span className={`text-[11px] block mb-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>درآمد امروز</span>
+            <span className="text-sm md:text-base font-bold text-emerald-500 flex items-center gap-1">
               <TrendingUp className="w-4 h-4" />
               {formatCurrency(todayIncome, settings.currency)}
             </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <span className="text-[11px] text-slate-400 block mb-1">هزینه امروز</span>
-            <span className="text-sm md:text-base font-bold text-rose-400 flex items-center gap-1">
+          <div className={`p-3.5 rounded-2xl border backdrop-blur-md ${
+            isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
+          }`}>
+            <span className={`text-[11px] block mb-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>هزینه امروز</span>
+            <span className="text-sm md:text-base font-bold text-rose-500 flex items-center gap-1">
               <TrendingDown className="w-4 h-4" />
               {formatCurrency(todayExpense, settings.currency)}
             </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <span className="text-[11px] text-slate-400 block mb-1">درآمد این ماه</span>
-            <span className="text-sm md:text-base font-bold text-emerald-400">
+          <div className={`p-3.5 rounded-2xl border backdrop-blur-md ${
+            isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
+          }`}>
+            <span className={`text-[11px] block mb-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>درآمد این ماه</span>
+            <span className="text-sm md:text-base font-bold text-emerald-500">
               {formatCurrency(monthlyIncome, settings.currency)}
             </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <span className="text-[11px] text-slate-400 block mb-1">هزینه این ماه</span>
-            <span className="text-sm md:text-base font-bold text-rose-400">
+          <div className={`p-3.5 rounded-2xl border backdrop-blur-md ${
+            isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
+          }`}>
+            <span className={`text-[11px] block mb-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>هزینه این ماه</span>
+            <span className="text-sm md:text-base font-bold text-rose-500">
               {formatCurrency(monthlyExpense, settings.currency)}
             </span>
           </div>

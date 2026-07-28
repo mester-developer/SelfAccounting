@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Budget, Category, Transaction, UserSettings } from '../types';
-import { formatCurrency, getTodayIso } from '../utils/formatters';
+import { formatCurrency, getTodayIso, toEnglishDigits } from '../utils/formatters';
 import { DynamicIcon } from './DynamicIcon';
+import { AmountInput } from './AmountInput';
 import { Plus, AlertTriangle, PieChart, Trash2, Edit2, X } from 'lucide-react';
 
 interface BudgetsViewProps {
@@ -10,6 +11,7 @@ interface BudgetsViewProps {
   transactions: Transaction[];
   settings: UserSettings;
   onAddBudget: (b: Omit<Budget, 'id'>) => void;
+  onUpdateBudget?: (b: Budget) => void;
   onDeleteBudget: (id: string) => void;
 }
 
@@ -19,9 +21,11 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
   transactions,
   settings,
   onAddBudget,
+  onUpdateBudget,
   onDeleteBudget,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [categoryId, setCategoryId] = useState(
     categories.find((c) => c.type === 'expense')?.id || ''
   );
@@ -31,19 +35,49 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
 
   const currentMonthPrefix = getTodayIso().substring(0, 7);
 
+  const openAddModal = () => {
+    setEditingBudget(null);
+    setCategoryId(categories.find((c) => c.type === 'expense')?.id || '');
+    setAmount('');
+    setPeriod('monthly');
+    setWarningThresholdPercent(80);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (b: Budget) => {
+    setEditingBudget(b);
+    setCategoryId(b.categoryId);
+    setAmount(b.amount.toString());
+    setPeriod(b.period);
+    setWarningThresholdPercent(b.warningThresholdPercent || 80);
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || parseFloat(amount) <= 0) return;
+    const cleanAmt = parseFloat(toEnglishDigits(amount));
+    if (!cleanAmt || cleanAmt <= 0) return;
 
-    onAddBudget({
-      categoryId,
-      amount: parseFloat(amount),
-      period,
-      warningThresholdPercent,
-    });
+    if (editingBudget && onUpdateBudget) {
+      onUpdateBudget({
+        ...editingBudget,
+        categoryId,
+        amount: cleanAmt,
+        period,
+        warningThresholdPercent,
+      });
+    } else {
+      onAddBudget({
+        categoryId,
+        amount: cleanAmt,
+        period,
+        warningThresholdPercent,
+      });
+    }
 
     setIsModalOpen(false);
     setAmount('');
+    setEditingBudget(null);
   };
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
@@ -62,7 +96,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openAddModal}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium shadow-lg shadow-indigo-500/25 transition-all active:scale-95"
         >
           <Plus className="w-4 h-4" />
@@ -120,12 +154,22 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onDeleteBudget(b.id)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEditModal(b)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-colors"
+                    title="ویرایش بودجه"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteBudget(b.id)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors"
+                    title="حذف بودجه"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Progress & Amounts */}
@@ -207,7 +251,9 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl p-6 w-full max-w-md text-slate-100 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="font-bold text-sm text-white">تعریف بودجه جدید</h3>
+              <h3 className="font-bold text-sm text-white">
+                {editingBudget ? 'ویرایش بودجه' : 'تعریف بودجه جدید'}
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white border border-white/10"
@@ -236,15 +282,12 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
 
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">
-                  سقف مبلغ بودجه (تومان)
+                  سقف مبلغ بودجه ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                 </label>
-                <input
-                  type="number"
-                  placeholder="مثلا ۵,۰۰۰,۰۰۰"
+                <AmountInput
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                  onChange={setAmount}
+                  placeholder="مثلا ۵,۰۰۰,۰۰۰"
                 />
               </div>
 

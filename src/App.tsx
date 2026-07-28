@@ -78,6 +78,18 @@ export function App() {
     }
   }, []);
 
+  // Sync Theme Class on Document Element
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.theme === 'light') {
+      root.classList.remove('dark');
+      root.classList.add('light');
+    } else {
+      root.classList.remove('light');
+      root.classList.add('dark');
+    }
+  }, [settings.theme]);
+
   // Account Handlers
   const handleAddAccount = (acc: Omit<Account, 'id'>) => {
     const updated = StorageAPI.addAccount(acc);
@@ -171,6 +183,10 @@ export function App() {
     const updated = StorageAPI.addSubscription(s);
     setSubscriptions(updated);
   };
+  const handleUpdateSubscription = (s: Subscription) => {
+    const updated = StorageAPI.updateSubscription(s);
+    setSubscriptions(updated);
+  };
   const handleDeleteSubscription = (id: string) => {
     const updated = StorageAPI.deleteSubscription(id);
     setSubscriptions(updated);
@@ -179,6 +195,10 @@ export function App() {
   // Investment Handlers
   const handleAddInvestment = (inv: Omit<InvestmentAsset, 'id'>) => {
     const updated = StorageAPI.addInvestment(inv);
+    setInvestments(updated);
+  };
+  const handleUpdateInvestment = (inv: InvestmentAsset) => {
+    const updated = StorageAPI.updateInvestment(inv);
     setInvestments(updated);
   };
   const handleDeleteInvestment = (id: string) => {
@@ -224,8 +244,31 @@ export function App() {
   };
 
   const handleResetAllData = () => {
-    localStorage.clear();
-    window.location.reload();
+    StorageAPI.resetAllData();
+    setAccounts(StorageAPI.getAccounts());
+    setTransactions(StorageAPI.getTransactions());
+    setCategories(StorageAPI.getCategories());
+    setBudgets(StorageAPI.getBudgets());
+    setDebts(StorageAPI.getDebts());
+    setLoans(StorageAPI.getLoans());
+    setCheques(StorageAPI.getCheques());
+    setGoals(StorageAPI.getGoals());
+    setSubscriptions(StorageAPI.getSubscriptions());
+    setInvestments(StorageAPI.getInvestments());
+  };
+
+  const handleLoadDemoData = () => {
+    StorageAPI.loadDemoData();
+    setAccounts(StorageAPI.getAccounts());
+    setTransactions(StorageAPI.getTransactions());
+    setCategories(StorageAPI.getCategories());
+    setBudgets(StorageAPI.getBudgets());
+    setDebts(StorageAPI.getDebts());
+    setLoans(StorageAPI.getLoans());
+    setCheques(StorageAPI.getCheques());
+    setGoals(StorageAPI.getGoals());
+    setSubscriptions(StorageAPI.getSubscriptions());
+    setInvestments(StorageAPI.getInvestments());
   };
 
   if (isLocked) {
@@ -237,13 +280,25 @@ export function App() {
     );
   }
 
+  const isLight = settings.theme === 'light';
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
-      {/* Frosted Glass Background Ambient Blur Circles */}
+    <div className={`min-h-screen font-sans flex flex-col antialiased relative overflow-x-hidden transition-colors duration-300 ${
+      isLight 
+        ? 'bg-slate-100 text-slate-900 selection:bg-indigo-500 selection:text-white' 
+        : 'bg-slate-950 text-slate-100 dark selection:bg-indigo-500 selection:text-white'
+    }`}>
+      {/* Ambient Blur Circles */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] bg-indigo-600/20 rounded-full blur-[140px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/20 rounded-full blur-[140px]" />
-        <div className="absolute top-[35%] left-[40%] w-[35%] h-[35%] bg-purple-600/15 rounded-full blur-[150px]" />
+        <div className={`absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full blur-[140px] ${
+          isLight ? 'bg-indigo-300/30' : 'bg-indigo-600/20'
+        }`} />
+        <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[140px] ${
+          isLight ? 'bg-emerald-300/30' : 'bg-emerald-600/20'
+        }`} />
+        <div className={`absolute top-[35%] left-[40%] w-[35%] h-[35%] rounded-full blur-[150px] ${
+          isLight ? 'bg-purple-300/20' : 'bg-purple-600/15'
+        }`} />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -253,12 +308,13 @@ export function App() {
           onTabChange={setActiveTab}
           settings={settings}
           onOpenAddTransaction={() => setIsAddTransactionModalOpen(true)}
+          onUpdateSettings={handleUpdateSettings}
         />
 
         {/* Main Container */}
         <div className="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
           {/* Sidebar Navigation */}
-          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} settings={settings} />
 
           {/* Dynamic View Router */}
           <main className="flex-1 min-w-0">
@@ -347,6 +403,7 @@ export function App() {
               investments={investments}
               settings={settings}
               onAddInvestment={handleAddInvestment}
+              onUpdateInvestment={handleUpdateInvestment}
               onDeleteInvestment={handleDeleteInvestment}
             />
           )}
@@ -357,6 +414,7 @@ export function App() {
               accounts={accounts}
               settings={settings}
               onAddSubscription={handleAddSubscription}
+              onUpdateSubscription={handleUpdateSubscription}
               onDeleteSubscription={handleDeleteSubscription}
             />
           )}
@@ -406,6 +464,7 @@ export function App() {
               onExportBackup={handleExportBackup}
               onImportBackup={handleImportBackup}
               onResetAllData={handleResetAllData}
+              onLoadDemoData={handleLoadDemoData}
             />
           )}
 

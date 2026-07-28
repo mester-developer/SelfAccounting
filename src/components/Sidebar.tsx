@@ -40,22 +40,39 @@ export const NAV_ITEMS: NavTabItem[] = [
   { id: 'architecture', title: 'معماری نرم‌افزار', icon: Code },
 ];
 
+import { UserSettings } from '../types';
+
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  settings?: UserSettings;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, settings }) => {
+  const isLight = settings?.theme === 'light';
+
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white/5 backdrop-blur-xl border border-white/10 p-4 text-slate-300 select-none shrink-0 overflow-y-auto rounded-3xl shadow-2xl">
+    <aside className={`hidden lg:flex flex-col w-64 backdrop-blur-xl border p-4 select-none shrink-0 overflow-y-auto rounded-3xl shadow-xl transition-colors duration-200 ${
+      isLight
+        ? 'bg-white/80 border-slate-200 text-slate-800'
+        : 'bg-slate-900/80 border-white/10 text-slate-300'
+    }`}>
       {/* Brand Header */}
-      <div className="flex items-center gap-3 px-3.5 py-3 mb-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-black flex items-center justify-center text-lg shadow-lg shadow-indigo-500/30">
+      <div className={`flex items-center gap-3 px-3.5 py-3 mb-6 backdrop-blur-md rounded-2xl border ${
+        isLight
+          ? 'bg-slate-100/80 border-slate-200'
+          : 'bg-white/5 border-white/10'
+      }`}>
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-black flex items-center justify-center text-lg shadow-lg shadow-indigo-500/30">
           WP
         </div>
         <div>
-          <h2 className="font-bold text-white text-sm tracking-tight">مدیریت مالی پلاس</h2>
-          <p className="text-[11px] text-slate-400 font-light">WealthPulse Architect</p>
+          <h2 className={`font-bold text-sm tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+            مدیریت مالی پلاس
+          </h2>
+          <p className={`text-[11px] font-light ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            WealthPulse Architect
+          </p>
         </div>
       </div>
 
@@ -70,20 +87,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-indigo-500/20 text-white font-bold border border-indigo-500/40 shadow-lg shadow-indigo-500/10'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? isLight
+                    ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 shadow-sm'
+                    : 'bg-indigo-500/20 text-white font-bold border border-indigo-500/40 shadow-lg shadow-indigo-500/10'
+                  : isLight
+                    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <div className="flex items-center gap-3">
                 <IconComponent
                   className={`w-4 h-4 ${
-                    isActive ? 'text-indigo-400' : 'text-slate-400'
+                    isActive
+                      ? isLight ? 'text-indigo-600' : 'text-indigo-400'
+                      : isLight ? 'text-slate-500' : 'text-slate-400'
                   }`}
                 />
                 <span>{item.title}</span>
               </div>
               {item.badge && (
-                <span className="px-1.5 py-0.5 text-[10px] rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">
+                <span className={`px-1.5 py-0.5 text-[10px] rounded-md border font-bold ${
+                  isLight
+                    ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                    : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                }`}>
                   {item.badge}
                 </span>
               )}
@@ -93,9 +120,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       </nav>
 
       {/* Security Biometric / Info Banner */}
-      <div className="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
-        <p className="text-xs text-indigo-300 font-medium uppercase tracking-wider mb-1">امنیت بیومتریک</p>
-        <p className="text-[11px] text-slate-400 leading-relaxed">دسترسی با اثر انگشت و رمز پین فعال است</p>
+      <div className={`mt-6 p-4 border rounded-2xl ${
+        isLight
+          ? 'bg-indigo-50 border-indigo-100'
+          : 'bg-indigo-500/10 border-indigo-500/20'
+      }`}>
+        <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${
+          isLight ? 'text-indigo-700' : 'text-indigo-300'
+        }`}>
+          امنیت بیومتریک
+        </p>
+        <p className={`text-[11px] leading-relaxed ${
+          isLight ? 'text-slate-600' : 'text-slate-400'
+        }`}>
+          دسترسی با اثر انگشت و رمز پین فعال است
+        </p>
       </div>
 
       {/* Footer Info */}

@@ -50,8 +50,33 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat_other_income', name: 'سایر درآمدها', type: 'income', icon: 'Coins', color: '#8b5cf6', isDefault: true },
 ];
 
-// Initial Accounts
+// Initial Default Empty Lists for Clean Startup
 export const DEFAULT_ACCOUNTS: Account[] = [
+  {
+    id: 'acc_main',
+    name: 'حساب اصلی (بانک)',
+    type: 'bank',
+    balance: 0,
+    currency: 'TOMAN',
+    bankName: 'بانک اصلی',
+    color: '#6366f1',
+    icon: 'Building2',
+    isFavorite: true,
+  },
+];
+
+export const DEFAULT_TRANSACTIONS: Transaction[] = [];
+export const DEFAULT_BUDGETS: Budget[] = [];
+export const DEFAULT_DEBTS: Debt[] = [];
+export const DEFAULT_LOANS: Loan[] = [];
+export const DEFAULT_CHEQUES: Cheque[] = [];
+export const DEFAULT_GOALS: FinancialGoal[] = [];
+export const DEFAULT_SUBSCRIPTIONS: Subscription[] = [];
+export const DEFAULT_INVESTMENTS: InvestmentAsset[] = [];
+export const DEFAULT_NOTIFICATIONS: NotificationItem[] = [];
+
+// Sample Demo Data (Loadable via Settings)
+export const DEMO_ACCOUNTS: Account[] = [
   {
     id: 'acc_pasargad',
     name: 'کارت اصلی بانک پاسارگاد',
@@ -105,8 +130,7 @@ export const DEFAULT_ACCOUNTS: Account[] = [
   },
 ];
 
-// Initial Transactions
-export const DEFAULT_TRANSACTIONS: Transaction[] = [
+export const DEMO_TRANSACTIONS: Transaction[] = [
   {
     id: 'tx_1',
     type: 'income',
@@ -138,51 +162,14 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     note: 'شام با دوستان در رستوران',
     tags: ['تفریح', 'رستوران'],
   },
-  {
-    id: 'tx_4',
-    type: 'expense',
-    amount: 650000,
-    accountId: 'acc_pasargad',
-    categoryId: 'cat_transport',
-    date: '2026-07-23',
-    note: 'بنزین و اسنپ هفتگی',
-    tags: ['اسنپ', 'سوخت'],
-  },
-  {
-    id: 'tx_5',
-    type: 'transfer',
-    amount: 5000000,
-    accountId: 'acc_mellat',
-    targetAccountId: 'acc_gold',
-    categoryId: 'cat_investment_returns',
-    date: '2026-07-20',
-    note: 'انتقال برای خرید ۲ گرم طلای مستعمل',
-    tags: ['طلا', 'سرمایه‌گذاری'],
-  },
-  {
-    id: 'tx_6',
-    type: 'expense',
-    amount: 12000000,
-    accountId: 'acc_mellat',
-    categoryId: 'cat_housing',
-    date: '2026-07-01',
-    note: 'پرداخت اجاره‌بهای ماهانه خانه',
-    tags: ['اجاره', 'مسکن'],
-    isRecurring: true,
-    recurringInterval: 'monthly',
-  },
 ];
 
-// Initial Budgets
-export const DEFAULT_BUDGETS: Budget[] = [
+export const DEMO_BUDGETS: Budget[] = [
   { id: 'b_groc', categoryId: 'cat_groceries', amount: 8000000, period: 'monthly', warningThresholdPercent: 80 },
   { id: 'b_rest', categoryId: 'cat_restaurant', amount: 4000000, period: 'monthly', warningThresholdPercent: 75 },
-  { id: 'b_trans', categoryId: 'cat_transport', amount: 3000000, period: 'monthly', warningThresholdPercent: 85 },
-  { id: 'b_house', categoryId: 'cat_housing', amount: 15000000, period: 'monthly', warningThresholdPercent: 90 },
 ];
 
-// Initial Debts & Loans
-export const DEFAULT_DEBTS: Debt[] = [
+export const DEMO_DEBTS: Debt[] = [
   {
     id: 'debt_1',
     personName: 'علی رضایی',
@@ -193,19 +180,9 @@ export const DEFAULT_DEBTS: Debt[] = [
     description: 'قرض جهت خرید لپ‌تاپ',
     status: 'active',
   },
-  {
-    id: 'debt_2',
-    personName: 'مهندس احمدی (صاحبخانه)',
-    type: 'creditor',
-    totalAmount: 30000000,
-    paidAmount: 10000000,
-    dueDate: '2026-09-01',
-    description: 'باقیمانده ودیعه مسکن',
-    status: 'active',
-  },
 ];
 
-export const DEFAULT_LOANS: Loan[] = [
+export const DEMO_LOANS: Loan[] = [
   {
     id: 'loan_1',
     title: 'وام مرابحه بانک پاسارگاد',
@@ -220,7 +197,7 @@ export const DEFAULT_LOANS: Loan[] = [
   },
 ];
 
-export const DEFAULT_CHEQUES: Cheque[] = [
+export const DEMO_CHEQUES: Cheque[] = [
   {
     id: 'ch_1',
     chequeNumber: '928371',
@@ -235,7 +212,7 @@ export const DEFAULT_CHEQUES: Cheque[] = [
   },
 ];
 
-export const DEFAULT_GOALS: FinancialGoal[] = [
+export const DEMO_GOALS: FinancialGoal[] = [
   {
     id: 'goal_1',
     title: 'خرید خودروی شخصی',
@@ -246,19 +223,9 @@ export const DEFAULT_GOALS: FinancialGoal[] = [
     icon: 'Car',
     color: '#3b82f6',
   },
-  {
-    id: 'goal_2',
-    title: 'صندوق ذخیره اضطراری ۶ ماهه',
-    targetAmount: 150000000,
-    currentAmount: 95000000,
-    targetDate: '2026-12-29',
-    category: 'emergency',
-    icon: 'ShieldCheck',
-    color: '#10b981',
-  },
 ];
 
-export const DEFAULT_SUBSCRIPTIONS: Subscription[] = [
+export const DEMO_SUBSCRIPTIONS: Subscription[] = [
   {
     id: 'sub_1',
     name: 'اینترنت فیبر نوری شاتل',
@@ -270,20 +237,9 @@ export const DEFAULT_SUBSCRIPTIONS: Subscription[] = [
     autoRenew: true,
     accountId: 'acc_pasargad',
   },
-  {
-    id: 'sub_2',
-    name: 'اشتراک ۱ ساله فیلیمو و نماوا',
-    amount: 890000,
-    billingCycle: 'yearly',
-    nextBillingDate: '2026-11-15',
-    category: 'سرگرمی',
-    icon: 'Tv',
-    autoRenew: false,
-    accountId: 'acc_pasargad',
-  },
 ];
 
-export const DEFAULT_INVESTMENTS: InvestmentAsset[] = [
+export const DEMO_INVESTMENTS: InvestmentAsset[] = [
   {
     id: 'inv_1',
     name: 'طلای ۱۸ عیار آبشده',
@@ -294,28 +250,6 @@ export const DEFAULT_INVESTMENTS: InvestmentAsset[] = [
     currentPrice: 4250000,
     purchaseDate: '2026-03-10',
     unit: 'گرم',
-  },
-  {
-    id: 'inv_2',
-    name: 'تتر (USDT)',
-    symbol: 'USDT',
-    type: 'crypto',
-    quantity: 1000,
-    buyPrice: 59500,
-    currentPrice: 62000,
-    purchaseDate: '2026-05-01',
-    unit: 'تتر',
-  },
-  {
-    id: 'inv_3',
-    name: 'فولاد مبارکه اصفهان',
-    symbol: 'فولاد',
-    type: 'stock',
-    quantity: 25000,
-    buyPrice: 520,
-    currentPrice: 580,
-    purchaseDate: '2026-01-15',
-    unit: 'سهم',
   },
 ];
 
@@ -329,7 +263,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   enableNotifications: true,
 };
 
-export const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
+export const DEMO_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'notif_1',
     title: 'سررسید اقساط وام پاسارگاد',
@@ -448,9 +382,72 @@ export const StorageAPI = {
 
   resetAllData() {
     localStorage.clear();
+    this.saveAccounts(DEFAULT_ACCOUNTS);
+    this.saveTransactions(DEFAULT_TRANSACTIONS);
+    this.saveCategories(DEFAULT_CATEGORIES);
+    this.saveBudgets(DEFAULT_BUDGETS);
+    this.saveDebts(DEFAULT_DEBTS);
+    this.saveLoans(DEFAULT_LOANS);
+    this.saveCheques(DEFAULT_CHEQUES);
+    this.saveGoals(DEFAULT_GOALS);
+    this.saveSubscriptions(DEFAULT_SUBSCRIPTIONS);
+    this.saveInvestments(DEFAULT_INVESTMENTS);
+    this.saveSettings(DEFAULT_SETTINGS);
+    this.saveNotifications(DEFAULT_NOTIFICATIONS);
+  },
+
+  loadDemoData() {
+    this.saveAccounts(DEMO_ACCOUNTS);
+    this.saveTransactions(DEMO_TRANSACTIONS);
+    this.saveCategories(DEFAULT_CATEGORIES);
+    this.saveBudgets(DEMO_BUDGETS);
+    this.saveDebts(DEMO_DEBTS);
+    this.saveLoans(DEMO_LOANS);
+    this.saveCheques(DEMO_CHEQUES);
+    this.saveGoals(DEMO_GOALS);
+    this.saveSubscriptions(DEMO_SUBSCRIPTIONS);
+    this.saveInvestments(DEMO_INVESTMENTS);
+    this.saveNotifications(DEMO_NOTIFICATIONS);
   },
 
   initializeDefaultsIfEmpty() {
+    // Migration check: Clean old initial demo data if user was on previous pre-populated version
+    if (!localStorage.getItem('wealthpulse_clean_init_v2')) {
+      const existingLoans = this.getLoans();
+      if (existingLoans.some((l) => l.id === 'loan_1')) {
+        this.saveLoans(DEFAULT_LOANS);
+      }
+      const existingDebts = this.getDebts();
+      if (existingDebts.some((d) => d.id === 'debt_1' || d.id === 'debt_2')) {
+        this.saveDebts(DEFAULT_DEBTS);
+      }
+      const existingAccs = this.getAccounts();
+      if (existingAccs.some((a) => a.id === 'acc_pasargad' || a.id === 'acc_mellat')) {
+        this.saveAccounts(DEFAULT_ACCOUNTS);
+      }
+      const existingTxs = this.getTransactions();
+      if (existingTxs.some((t) => t.id === 'tx_1' || t.id === 'tx_6')) {
+        this.saveTransactions(DEFAULT_TRANSACTIONS);
+      }
+      const existingBudgets = this.getBudgets();
+      if (existingBudgets.some((b) => b.id === 'b_groc')) {
+        this.saveBudgets(DEFAULT_BUDGETS);
+      }
+      const existingGoals = this.getGoals();
+      if (existingGoals.some((g) => g.id === 'goal_1' || g.id === 'goal_2')) {
+        this.saveGoals(DEFAULT_GOALS);
+      }
+      const existingSubs = this.getSubscriptions();
+      if (existingSubs.some((s) => s.id === 'sub_1' || s.id === 'sub_2')) {
+        this.saveSubscriptions(DEFAULT_SUBSCRIPTIONS);
+      }
+      const existingInvs = this.getInvestments();
+      if (existingInvs.some((i) => i.id === 'inv_1' || i.id === 'inv_2')) {
+        this.saveInvestments(DEFAULT_INVESTMENTS);
+      }
+      localStorage.setItem('wealthpulse_clean_init_v2', 'true');
+    }
+
     if (!localStorage.getItem(STORAGE_KEYS.ACCOUNTS)) {
       this.saveAccounts(DEFAULT_ACCOUNTS);
     }
@@ -605,6 +602,12 @@ export const StorageAPI = {
     this.saveBudgets(updated);
     return updated;
   },
+  updateBudget(b: Budget): Budget[] {
+    const list = this.getBudgets();
+    const updated = list.map((item) => (item.id === b.id ? b : item));
+    this.saveBudgets(updated);
+    return updated;
+  },
   deleteBudget(id: string): Budget[] {
     const updated = this.getBudgets().filter((b) => b.id !== id);
     this.saveBudgets(updated);
@@ -688,6 +691,12 @@ export const StorageAPI = {
     this.saveSubscriptions(updated);
     return updated;
   },
+  updateSubscription(s: Subscription): Subscription[] {
+    const list = this.getSubscriptions();
+    const updated = list.map((item) => (item.id === s.id ? s : item));
+    this.saveSubscriptions(updated);
+    return updated;
+  },
   deleteSubscription(id: string): Subscription[] {
     const updated = this.getSubscriptions().filter((s) => s.id !== id);
     this.saveSubscriptions(updated);
@@ -701,6 +710,12 @@ export const StorageAPI = {
     this.saveInvestments(updated);
     return updated;
   },
+  updateInvestment(inv: InvestmentAsset): InvestmentAsset[] {
+    const list = this.getInvestments();
+    const updated = list.map((item) => (item.id === inv.id ? inv : item));
+    this.saveInvestments(updated);
+    return updated;
+  },
   deleteInvestment(id: string): InvestmentAsset[] {
     const updated = this.getInvestments().filter((inv) => inv.id !== id);
     this.saveInvestments(updated);
@@ -711,6 +726,12 @@ export const StorageAPI = {
     const list = this.getCategories();
     const newCat: Category = { ...cat, id: `cat_${Date.now()}` };
     const updated = [newCat, ...list];
+    this.saveCategories(updated);
+    return updated;
+  },
+  updateCategory(cat: Category): Category[] {
+    const list = this.getCategories();
+    const updated = list.map((item) => (item.id === cat.id ? cat : item));
     this.saveCategories(updated);
     return updated;
   },

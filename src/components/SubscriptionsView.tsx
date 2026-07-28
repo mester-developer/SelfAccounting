@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Subscription, Account, UserSettings } from '../types';
-import { formatCurrency, formatDate } from '../utils/formatters';
-import { Repeat, Plus, Trash2, X, Wifi, Tv, Zap, RefreshCw } from 'lucide-react';
+import { formatCurrency, formatDate, toEnglishDigits } from '../utils/formatters';
+import { AmountInput } from './AmountInput';
+import { Repeat, Plus, Trash2, Edit2, X, Wifi, Tv, Zap, RefreshCw } from 'lucide-react';
 
 interface SubscriptionsViewProps {
   subscriptions: Subscription[];
   accounts: Account[];
   settings: UserSettings;
   onAddSubscription: (sub: Omit<Subscription, 'id'>) => void;
+  onUpdateSubscription?: (sub: Subscription) => void;
   onDeleteSubscription: (id: string) => void;
 }
 
@@ -16,9 +18,11 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
   accounts,
   settings,
   onAddSubscription,
+  onUpdateSubscription,
   onDeleteSubscription,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSub, setEditingSub] = useState<Subscription | null>(null);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -26,24 +30,60 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
   const [category, setCategory] = useState('قبوض و اینترنت');
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
 
+  const openAddModal = () => {
+    setEditingSub(null);
+    setName('');
+    setAmount('');
+    setBillingCycle('monthly');
+    setNextBillingDate('');
+    setCategory('قبوض و اینترنت');
+    setAccountId(accounts[0]?.id || '');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (sub: Subscription) => {
+    setEditingSub(sub);
+    setName(sub.name);
+    setAmount(sub.amount.toString());
+    setBillingCycle(sub.billingCycle);
+    setNextBillingDate(sub.nextBillingDate);
+    setCategory(sub.category || 'قبوض و اینترنت');
+    setAccountId(sub.accountId || accounts[0]?.id || '');
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !amount) return;
+    const cleanAmt = parseFloat(toEnglishDigits(amount));
+    if (!name || !cleanAmt) return;
 
-    onAddSubscription({
-      name,
-      amount: parseFloat(amount),
-      billingCycle,
-      nextBillingDate: nextBillingDate || '2026-08-15',
-      category,
-      icon: 'Repeat',
-      autoRenew: true,
-      accountId,
-    });
+    if (editingSub && onUpdateSubscription) {
+      onUpdateSubscription({
+        ...editingSub,
+        name,
+        amount: cleanAmt,
+        billingCycle,
+        nextBillingDate: nextBillingDate || '2026-08-15',
+        category,
+        accountId,
+      });
+    } else {
+      onAddSubscription({
+        name,
+        amount: cleanAmt,
+        billingCycle,
+        nextBillingDate: nextBillingDate || '2026-08-15',
+        category,
+        icon: 'Repeat',
+        autoRenew: true,
+        accountId,
+      });
+    }
 
     setIsModalOpen(false);
     setName('');
     setAmount('');
+    setEditingSub(null);
   };
 
   const totalMonthlyCost = subscriptions.reduce((sum, s) => {
@@ -67,7 +107,7 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openAddModal}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-lg hover:bg-emerald-400 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -98,12 +138,22 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onDeleteSubscription(sub.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-400"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEditModal(sub)}
+                    className="p-1.5 text-slate-400 hover:text-white"
+                    title="ویرایش اشتراک"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteSubscription(sub.id)}
+                    className="p-1.5 text-slate-500 hover:text-rose-400"
+                    title="حذف اشتراک"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-1.5 text-xs">
@@ -137,7 +187,9 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md text-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-sm">ثبت اشتراک جدید</h3>
+              <h3 className="font-bold text-sm">
+                {editingSub ? 'ویرایش اشتراک / قبض' : 'ثبت اشتراک جدید'}
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 text-slate-400 hover:text-white"
@@ -164,15 +216,12 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    مبلغ (تومان)
+                    مبلغ ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                   </label>
-                  <input
-                    type="number"
-                    placeholder="۲۵۰,۰۰۰"
+                  <AmountInput
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100"
+                    onChange={setAmount}
+                    placeholder="۲۵۰,۰۰۰"
                   />
                 </div>
                 <div>

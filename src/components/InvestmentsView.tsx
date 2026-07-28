@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { InvestmentAsset, UserSettings } from '../types';
-import { formatCurrency, formatNumber } from '../utils/formatters';
-import { TrendingUp, Coins, Bitcoin, Building, Plus, Trash2, X } from 'lucide-react';
+import { formatCurrency, formatNumber, toEnglishDigits } from '../utils/formatters';
+import { AmountInput } from './AmountInput';
+import { TrendingUp, Coins, Bitcoin, Building, Plus, Trash2, Edit2, X } from 'lucide-react';
 
 interface InvestmentsViewProps {
   investments: InvestmentAsset[];
   settings: UserSettings;
   onAddInvestment: (inv: Omit<InvestmentAsset, 'id'>) => void;
+  onUpdateInvestment?: (inv: InvestmentAsset) => void;
   onDeleteInvestment: (id: string) => void;
 }
 
@@ -14,9 +16,11 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   investments,
   settings,
   onAddInvestment,
+  onUpdateInvestment,
   onDeleteInvestment,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingInv, setEditingInv] = useState<InvestmentAsset | null>(null);
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [type, setType] = useState<'gold' | 'crypto' | 'stock' | 'fund'>('gold');
@@ -25,25 +29,67 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   const [currentPrice, setCurrentPrice] = useState('');
   const [unit, setUnit] = useState('گرم');
 
+  const openAddModal = () => {
+    setEditingInv(null);
+    setName('');
+    setSymbol('');
+    setType('gold');
+    setQuantity('');
+    setBuyPrice('');
+    setCurrentPrice('');
+    setUnit('گرم');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (inv: InvestmentAsset) => {
+    setEditingInv(inv);
+    setName(inv.name);
+    setSymbol(inv.symbol || inv.name);
+    setType(inv.type);
+    setQuantity(inv.quantity.toString());
+    setBuyPrice(inv.buyPrice.toString());
+    setCurrentPrice(inv.currentPrice.toString());
+    setUnit(inv.unit || 'گرم');
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !quantity || !buyPrice) return;
+    const cleanQty = parseFloat(toEnglishDigits(quantity));
+    const cleanBuyPrice = parseFloat(toEnglishDigits(buyPrice));
+    const cleanCurrentPrice = parseFloat(toEnglishDigits(currentPrice)) || cleanBuyPrice;
 
-    onAddInvestment({
-      name,
-      symbol: symbol || name,
-      type,
-      quantity: parseFloat(quantity),
-      buyPrice: parseFloat(buyPrice),
-      currentPrice: parseFloat(currentPrice) || parseFloat(buyPrice),
-      purchaseDate: new Date().toISOString().split('T')[0],
-      unit,
-    });
+    if (!name || !cleanQty || !cleanBuyPrice) return;
+
+    if (editingInv && onUpdateInvestment) {
+      onUpdateInvestment({
+        ...editingInv,
+        name,
+        symbol: symbol || name,
+        type,
+        quantity: cleanQty,
+        buyPrice: cleanBuyPrice,
+        currentPrice: cleanCurrentPrice,
+        unit,
+      });
+    } else {
+      onAddInvestment({
+        name,
+        symbol: symbol || name,
+        type,
+        quantity: cleanQty,
+        buyPrice: cleanBuyPrice,
+        currentPrice: cleanCurrentPrice,
+        purchaseDate: new Date().toISOString().split('T')[0],
+        unit,
+      });
+    }
 
     setIsModalOpen(false);
     setName('');
     setQuantity('');
     setBuyPrice('');
+    setEditingInv(null);
   };
 
   // Portfolio Totals
@@ -93,7 +139,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           </div>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-medium text-xs shadow-lg shadow-indigo-500/25 transition-all shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -134,12 +180,22 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onDeleteInvestment(inv.id)}
-                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors border border-transparent hover:border-rose-500/20"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEditModal(inv)}
+                    className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors border border-transparent hover:border-white/10"
+                    title="ویرایش دارایی"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteInvestment(inv.id)}
+                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors border border-transparent hover:border-rose-500/20"
+                    title="حذف دارایی"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-950/40 border border-white/10 space-y-1.5 text-xs">
@@ -183,7 +239,9 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl p-6 w-full max-w-md text-slate-100 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="font-bold text-sm text-white">افزودن دارایی جدید به سبد</h3>
+              <h3 className="font-bold text-sm text-white">
+                {editingInv ? 'ویرایش دارایی' : 'افزودن دارایی جدید به سبد'}
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white border border-white/10"
@@ -263,27 +321,22 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    قیمت خرید
+                    قیمت خرید ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                   </label>
-                  <input
-                    type="number"
-                    placeholder="۳,۵۰۰,۰۰۰"
+                  <AmountInput
                     value={buyPrice}
-                    onChange={(e) => setBuyPrice(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                    onChange={setBuyPrice}
+                    placeholder="۳,۵۰۰,۰۰۰"
                   />
                 </div>
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    قیمت روز
+                    قیمت روز ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                   </label>
-                  <input
-                    type="number"
-                    placeholder="۴,۲۰۰,۰۰۰"
+                  <AmountInput
                     value={currentPrice}
-                    onChange={(e) => setCurrentPrice(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                    onChange={setCurrentPrice}
+                    placeholder="۴,۲۰۰,۰۰۰"
                   />
                 </div>
               </div>

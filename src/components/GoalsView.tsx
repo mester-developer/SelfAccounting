@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FinancialGoal, Account, UserSettings, Transaction } from '../types';
 import { formatCurrency, formatDate, getTodayIso, toEnglishDigits } from '../utils/formatters';
-import { Plus, Target, Trash2, X, PlusCircle } from 'lucide-react';
+import { AmountInput } from './AmountInput';
+import { Plus, Target, Trash2, Edit2, X, PlusCircle } from 'lucide-react';
 
 interface GoalsViewProps {
   goals: FinancialGoal[];
@@ -25,6 +26,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   const safeGoals = goals || [];
   const safeAccounts = accounts || [];
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
   const [depositModalGoal, setDepositModalGoal] = useState<FinancialGoal | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState(safeAccounts[0]?.id || '');
@@ -34,6 +36,24 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   const [currentAmount, setCurrentAmount] = useState('');
   const [targetDate, setTargetDate] = useState('');
 
+  const openAddModal = () => {
+    setEditingGoal(null);
+    setTitle('');
+    setTargetAmount('');
+    setCurrentAmount('');
+    setTargetDate('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (g: FinancialGoal) => {
+    setEditingGoal(g);
+    setTitle(g.title);
+    setTargetAmount(g.targetAmount.toString());
+    setCurrentAmount(g.currentAmount.toString());
+    setTargetDate(g.targetDate || '');
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !targetAmount) return;
@@ -41,20 +61,31 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
     const parsedTarget = parseFloat(toEnglishDigits(targetAmount));
     const parsedCurrent = parseFloat(toEnglishDigits(currentAmount)) || 0;
 
-    onAddGoal({
-      title,
-      targetAmount: parsedTarget,
-      currentAmount: parsedCurrent,
-      targetDate: targetDate || getTodayIso(),
-      category: 'purchase',
-      icon: 'Target',
-      color: '#10b981',
-    });
+    if (editingGoal) {
+      onUpdateGoal({
+        ...editingGoal,
+        title,
+        targetAmount: parsedTarget,
+        currentAmount: parsedCurrent,
+        targetDate: targetDate || getTodayIso(),
+      });
+    } else {
+      onAddGoal({
+        title,
+        targetAmount: parsedTarget,
+        currentAmount: parsedCurrent,
+        targetDate: targetDate || getTodayIso(),
+        category: 'purchase',
+        icon: 'Target',
+        color: '#10b981',
+      });
+    }
 
     setIsModalOpen(false);
     setTitle('');
     setTargetAmount('');
     setCurrentAmount('');
+    setEditingGoal(null);
   };
 
   const handleDeposit = (e: React.FormEvent) => {
@@ -98,7 +129,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openAddModal}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium shadow-lg shadow-indigo-500/25 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -133,12 +164,22 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onDeleteGoal(g.id)}
-                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors border border-transparent hover:border-rose-500/20"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEditModal(g)}
+                    className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors border border-transparent hover:border-white/10"
+                    title="ویرایش هدف"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteGoal(g.id)}
+                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors border border-transparent hover:border-rose-500/20"
+                    title="حذف هدف"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2 text-xs">
@@ -186,7 +227,9 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl p-6 w-full max-w-md text-slate-100 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="font-bold text-sm text-white">تعریف هدف پس‌انداز جدید</h3>
+              <h3 className="font-bold text-sm text-white">
+                {editingGoal ? 'ویرایش هدف پس‌انداز' : 'تعریف هدف پس‌انداز جدید'}
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white border border-white/10"
@@ -213,27 +256,22 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    مبلغ هدف (تومان)
+                    مبلغ هدف ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                   </label>
-                  <input
-                    type="number"
-                    placeholder="۲۰۰,۰۰۰,۰۰۰"
+                  <AmountInput
                     value={targetAmount}
-                    onChange={(e) => setTargetAmount(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                    onChange={setTargetAmount}
+                    placeholder="۲۰۰,۰۰۰,۰۰۰"
                   />
                 </div>
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    موجود اولیه
+                    موجودی فعلی
                   </label>
-                  <input
-                    type="number"
-                    placeholder="۰"
+                  <AmountInput
                     value={currentAmount}
-                    onChange={(e) => setCurrentAmount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                    onChange={setCurrentAmount}
+                    placeholder="۰"
                   />
                 </div>
               </div>
@@ -299,15 +337,12 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
 
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">
-                  مبلغ واریزی (تومان)
+                  مبلغ واریزی ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                 </label>
-                <input
-                  type="text"
-                  placeholder="۵,۰۰۰,۰۰۰"
+                <AmountInput
                   value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 text-white font-bold placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                  onChange={setDepositAmount}
+                  placeholder="۵,۰۰۰,۰۰۰"
                 />
               </div>
 

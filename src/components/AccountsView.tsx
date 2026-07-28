@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Account, AccountType, UserSettings } from '../types';
-import { formatCurrency } from '../utils/formatters';
-import { DynamicIcon } from './DynamicIcon';
+import { formatCurrency, toEnglishDigits } from '../utils/formatters';
+import { AmountInput } from './AmountInput';
 import {
   Plus,
   CreditCard,
@@ -46,6 +46,14 @@ const PRESET_COLORS = [
   '#eab308',
   '#14b8a6',
 ];
+
+const getAccountIcon = (iconName: string, type: string) => {
+  if (type === 'crypto' || iconName === 'Bitcoin') return <Bitcoin className="w-5 h-5" />;
+  if (type === 'cash' || iconName === 'Coins') return <Coins className="w-5 h-5" />;
+  if (type === 'wallet' || iconName === 'Wallet') return <Wallet className="w-5 h-5" />;
+  if (type === 'bank' || iconName === 'Building2') return <Building2 className="w-5 h-5" />;
+  return <CreditCard className="w-5 h-5" />;
+};
 
 export const AccountsView: React.FC<AccountsViewProps> = ({
   accounts,
@@ -96,12 +104,14 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
     e.preventDefault();
     if (!name) return;
 
+    const cleanBal = parseFloat(toEnglishDigits(balance)) || 0;
+
     if (editingAccount) {
       onUpdateAccount({
         ...editingAccount,
         name,
         type,
-        balance: parseFloat(balance) || 0,
+        balance: cleanBal,
         cardNumber,
         accountNumber,
         bankName,
@@ -112,7 +122,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
       onAddAccount({
         name,
         type,
-        balance: parseFloat(balance) || 0,
+        balance: cleanBal,
         currency: settings.currency,
         cardNumber,
         accountNumber,
@@ -164,7 +174,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                   className="p-3 rounded-2xl text-slate-950 font-bold shadow-md"
                   style={{ backgroundColor: acc.color }}
                 >
-                  <DynamicIcon name={acc.icon} className="w-5 h-5" />
+                  {getAccountIcon(acc.icon, acc.type)}
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-white group-hover:text-indigo-300 transition-colors">
@@ -272,14 +282,12 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                 </div>
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">
-                    موجودی اولیه (تومان)
+                    موجودی ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
                   </label>
-                  <input
-                    type="number"
-                    placeholder="۰"
+                  <AmountInput
                     value={balance}
-                    onChange={(e) => setBalance(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                    onChange={setBalance}
+                    placeholder="۰"
                   />
                 </div>
               </div>
