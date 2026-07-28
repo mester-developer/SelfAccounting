@@ -13,6 +13,17 @@ app.use(express.json({ limit: "10mb" }));
 
 // Rate Limiter for AI endpoints
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+// Periodic cleanup of expired rate limit entries to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of rateLimitMap.entries()) {
+    if (now > record.resetTime) {
+      rateLimitMap.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
+
 const aiRateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const ip = req.ip || req.socket.remoteAddress || "127.0.0.1";
   const now = Date.now();
@@ -61,7 +72,17 @@ app.get("/api/health", (req, res) => {
 // AI Financial Insights & Anomaly Detection Endpoint
 app.post("/api/ai/analyze-expenses", async (req, res) => {
   try {
-    const { transactions, accounts, budgets, goals } = req.body;
+    const { transactions = [], accounts = [], budgets = [], goals = [] } = req.body || {};
+
+    if (!Array.isArray(transactions) || !Array.isArray(accounts) || !Array.isArray(budgets) || !Array.isArray(goals)) {
+      return res.status(400).json({ error: "فرمت ورودی‌ها نامعتبر است. تمامی لیست‌ها باید به صورت آرایه باشند." });
+    }
+
+    // Sanitize payload sizes
+    const safeTxs = transactions.slice(0, 50);
+    const safeAccs = accounts.slice(0, 20);
+    const safeBudgets = budgets.slice(0, 20);
+    const safeGoals = goals.slice(0, 20);
     
     const ai = getGeminiClient();
 
@@ -70,10 +91,10 @@ app.post("/api/ai/analyze-expenses", async (req, res) => {
 اطلاعات زیر را تحلیل کن و یک پاسخ JSON ساختاریافته ارائه بده.
 
 اطلاعات مالی کاربر:
-- حساب‌ها: ${JSON.stringify(accounts || [])}
-- بودجه‌ها: ${JSON.stringify(budgets || [])}
-- تراکنش‌های اخیر (۳۰ روز گذشته): ${JSON.stringify((transactions || []).slice(0, 35))}
-- اهداف مالی: ${JSON.stringify(goals || [])}
+- حساب‌ها: ${JSON.stringify(safeAccs)}
+- بودجه‌ها: ${JSON.stringify(safeBudgets)}
+- تراکنش‌های اخیر: ${JSON.stringify(safeTxs)}
+- اهداف مالی: ${JSON.stringify(safeGoals)}
 
 پاسخ را دقیقا به فرمت JSON زیر بده (بدون متن اضافه یا علامت‌های Markdown مثل \`\`\`json):
 {
@@ -116,17 +137,30 @@ app.post("/api/ai/analyze-expenses", async (req, res) => {
 // AI Interactive Financial Advisor Chat Endpoint
 app.post("/api/ai/financial-advisor", async (req, res) => {
   try {
-    const { message, contextHistory, financialSnapshot } = req.body;
+    const { message, financialSnapshot } = req.body || {};
+
+    if (!message || typeof message !== "string" || message.trim().length === 0) {
+      return res.status(400).json({ error: "پیام کاربر نامعتبر یا خالی است." });
+    }
+
+    if (message.length > 2000) {
+      return res.status(400).json({ error: "طول پیام بیش از حد مجاز است (حداکثر ۲۰۰۰ کاراکتر)." });
+    }
+
     const ai = getGeminiClient();
+
+    const netWorth = typeof financialSnapshot?.netWorth === "number" ? financialSnapshot.netWorth : 0;
+    const monthlyIncome = typeof financialSnapshot?.monthlyIncome === "number" ? financialSnapshot.monthlyIncome : 0;
+    const monthlyExpense = typeof financialSnapshot?.monthlyExpense === "number" ? financialSnapshot.monthlyExpense : 0;
 
     const systemInstruction = `
 تو "آریا"، مشاور مالی هوشمند و دستیار شخصی کاربران در نرم‌افزار مدیریت مالی WealthPulse هستی.
 لحن تو بسیار محترمانه، کارشناسانه، انگیزه بخش، مدرن و دقیق است.
 همواره به زبان فارسی پاسخ بده.
 با توجه به وضعیت مالی کاربر (موجودی حساب‌ها، درآمدها، هزینه‌ها، اقساط و اهداف):
-موجودی کل کاربر: ${financialSnapshot?.netWorth || 0}
-درآمد این ماه: ${financialSnapshot?.monthlyIncome || 0}
-هزینه این ماه: ${financialSnapshot?.monthlyExpense || 0}
+موجودی کل کاربر: ${netWorth}
+درآمد این ماه: ${monthlyIncome}
+هزینه این ماه: ${monthlyExpense}
 
 به سوالات کاربر پاسخ‌های کاربردی، تخصصی و در عین حال ساده برای بهینه‌سازی مالی، پس‌انداز، سرمایه‌گذاری (طلا، ارز، بورس، صندوق‌ها) و مدیریت بدهی‌ها بده.
     `;
@@ -134,7 +168,7 @@ app.post("/api/ai/financial-advisor", async (req, res) => {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: [
-        { role: "user", parts: [{ text: message }] }
+        { role: "user", parts: [{ text: message.trim() }] }
       ],
       config: {
         systemInstruction,
@@ -155,9 +189,19 @@ app.post("/api/ai/financial-advisor", async (req, res) => {
 // AI Receipt Scanner (OCR) Endpoint
 app.post("/api/ai/scan-receipt", async (req, res) => {
   try {
-    const { imageBase64, mimeType } = req.body;
-    if (!imageBase64) {
+    const { imageBase64, mimeType } = req.body || {};
+
+    if (!imageBase64 || typeof imageBase64 !== "string") {
       return res.status(400).json({ error: "تصویر فاکتور ارسال نشده است." });
+    }
+
+    const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic"];
+    const safeMimeType = (mimeType && typeof mimeType === "string" && allowedMimeTypes.includes(mimeType))
+      ? mimeType
+      : "image/jpeg";
+
+    if (imageBase64.length > 15 * 1024 * 1024) {
+      return res.status(400).json({ error: "حجم تصویر ارسال شده بیش از حد مجاز است." });
     }
 
     const ai = getGeminiClient();
@@ -182,7 +226,7 @@ app.post("/api/ai/scan-receipt", async (req, res) => {
           {
             inlineData: {
               data: imageBase64.replace(/^data:image\/\w+;base64,/, ""),
-              mimeType: mimeType || "image/jpeg",
+              mimeType: safeMimeType,
             },
           },
           { text: prompt },

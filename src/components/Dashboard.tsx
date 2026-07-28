@@ -9,7 +9,7 @@ import {
   Loan,
   UserSettings,
 } from '../types';
-import { formatCurrency, formatDate, getTodayIso } from '../utils/formatters';
+import { formatCurrency, formatDate, getTodayIso, groupBalancesByCurrency } from '../utils/formatters';
 import { DynamicIcon } from './DynamicIcon';
 import {
   TrendingUp,
@@ -64,7 +64,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const currentMonthPrefix = (todayIso || '').substring(0, 7); // e.g. 2026-07
 
   // Liabilities and Net Worth
-  const accountBalances = safeAccounts.reduce((acc, curr) => acc + (curr?.balance || 0), 0);
+  const primaryCurrencyAccounts = safeAccounts.filter(
+    (a) => a?.currency === settings.currency || (!a?.currency && settings.currency === 'TOMAN')
+  );
+  const accountBalances = primaryCurrencyAccounts.reduce((acc, curr) => acc + (curr?.balance || 0), 0);
+
+  const currencyGroups = groupBalancesByCurrency(safeAccounts);
+  const otherCurrencies = Object.entries(currencyGroups).filter(
+    ([curr]) => curr !== settings.currency
+  );
+
   const debtorClaims = safeDebts.filter((d) => d.type === 'debtor').reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
   const creditorDebts = safeDebts.filter((d) => d.type === 'creditor').reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
   const remainingLoans = safeLoans.reduce((sum, l) => sum + l.remainingAmount, 0);
@@ -139,7 +148,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <p className={`text-xs mt-2 font-light flex flex-wrap items-center gap-2 ${
               isLight ? 'text-slate-600' : 'text-slate-400'
             }`}>
-              <span>مجموع حساب‌ها: {formatCurrency(accountBalances, settings.currency)}</span>
+              <span>مجموع حساب‌ها ({settings.currency === 'IRR' ? 'ریال' : 'تومان'}): {formatCurrency(accountBalances, settings.currency)}</span>
               {(creditorDebts > 0 || remainingLoans > 0) && (
                 <span className="text-rose-500 font-medium">
                   | بدهی و وام: {formatCurrency(creditorDebts + remainingLoans, settings.currency)}-
@@ -151,6 +160,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </span>
               )}
             </p>
+            {otherCurrencies.length > 0 && (
+              <p className="text-[11px] text-slate-400 mt-1">
+                حساب‌های با سایر ارزها:{' '}
+                {otherCurrencies
+                  .map(([curr, val]) => formatCurrency(val, curr as any))
+                  .join(' | ')}
+              </p>
+            )}
           </div>
 
           {/* Quick Action Buttons */}

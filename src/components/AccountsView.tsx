@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Account, AccountType, UserSettings } from '../types';
-import { formatCurrency, toEnglishDigits } from '../utils/formatters';
+import { Account, AccountType, Transaction, UserSettings } from '../types';
+import { formatCurrency, toEnglishDigits, groupBalancesByCurrency } from '../utils/formatters';
 import { AmountInput } from './AmountInput';
 import {
   Plus,
@@ -14,10 +14,12 @@ import {
   Star,
   X,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface AccountsViewProps {
   accounts: Account[];
+  transactions?: Transaction[];
   settings: UserSettings;
   onAddAccount: (acc: Omit<Account, 'id'>) => void;
   onUpdateAccount: (acc: Account) => void;
@@ -57,6 +59,7 @@ const getAccountIcon = (iconName: string, type: string) => {
 
 export const AccountsView: React.FC<AccountsViewProps> = ({
   accounts,
+  transactions = [],
   settings,
   onAddAccount,
   onUpdateAccount,
@@ -64,6 +67,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
 
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('card');
@@ -135,7 +139,15 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
     setIsModalOpen(false);
   };
 
-  const totalBalance = accounts.reduce((acc, curr) => acc + curr.balance, 0);
+  const primaryAccounts = accounts.filter(
+    (a) => a.currency === settings.currency || (!a.currency && settings.currency === 'TOMAN')
+  );
+  const totalBalance = primaryAccounts.reduce((acc, curr) => acc + curr.balance, 0);
+
+  const currencyGroups = groupBalancesByCurrency(accounts);
+  const otherCurrencies = Object.entries(currencyGroups).filter(
+    ([curr]) => curr !== settings.currency
+  );
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
@@ -144,10 +156,18 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
         <div>
           <h2 className="text-lg font-bold text-white">مدیریت حساب‌ها و دارایی‌ها</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            مجموع موجودی تمام حساب‌ها:{' '}
+            مجموع موجودی اصلی ({settings.currency === 'IRR' ? 'ریال' : 'تومان'}):{' '}
             <strong className="text-emerald-400 font-extrabold text-sm">
               {formatCurrency(totalBalance, settings.currency)}
             </strong>
+            {otherCurrencies.length > 0 && (
+              <span className="block text-[11px] text-slate-400 mt-0.5">
+                سایر ارزها:{' '}
+                {otherCurrencies
+                  .map(([curr, val]) => formatCurrency(val, curr as any))
+                  .join(' | ')}
+              </span>
+            )}
           </p>
         </div>
 
@@ -196,7 +216,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => onDeleteAccount(acc.id)}
+                  onClick={() => setAccountToDelete(acc)}
                   className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors"
                   title="حذف حساب"
                 >
@@ -355,6 +375,63 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
           </div>
         </div>
       )}
+      {/* Delete Confirmation Modal */}
+      {accountToDelete && (() => {
+        const linkedTxsCount = transactions.filter(
+          (t) => t.accountId === accountToDelete.id || t.toAccountId === accountToDelete.id || t.targetAccountId === accountToDelete.id
+        ).length;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl p-6 w-full max-w-sm text-slate-100 space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-rose-400" />
+                  حذف حساب
+                </h3>
+                <button
+                  onClick={() => setAccountToDelete(null)}
+                  className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white border border-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs leading-relaxed text-slate-300">
+                <p>
+                  آیا از حذف حساب <strong className="text-white">{accountToDelete.name}</strong> اطمینان دارید؟
+                </p>
+                {linkedTxsCount > 0 && (
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <span>
+                      این حساب دارای <strong>{linkedTxsCount}</strong> تراکنش ثبت‌شده است. حذف حساب باعث حذف تاریخچه حساب متصل به این تراکنش‌ها می‌شود.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  onClick={() => setAccountToDelete(null)}
+                  className="w-1/2 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-xs border border-white/10 transition-all"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteAccount(accountToDelete.id);
+                    setAccountToDelete(null);
+                  }}
+                  className="w-1/2 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-lg shadow-rose-500/25 transition-all"
+                >
+                  حذف قطعی
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

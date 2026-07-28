@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserSettings } from '../types';
+import { hashPin, generateSalt } from '../utils/crypto';
 import {
   Settings as SettingsIcon,
   Moon,
@@ -9,6 +10,7 @@ import {
   Upload,
   RefreshCw,
   ShieldCheck,
+  Fingerprint,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -28,8 +30,81 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onResetAllData,
   onLoadDemoData,
 }) => {
-  const [pinInput, setPinInput] = useState(settings.pinCode || '');
+  const [pinInput, setPinInput] = useState('');
+  const [pinStatus, setPinStatus] = useState<string | null>(null);
+  const [isSavingPin, setIsSavingPin] = useState(false);
   const isLight = settings.theme === 'light';
+
+  const handleSavePin = async () => {
+    if (pinInput.length !== 4 || !/^\d{4}$/.test(pinInput)) {
+      setPinStatus('لطفاً یک کد ۴ رقمی عددی وارد کنید.');
+      return;
+    }
+    setIsSavingPin(true);
+    setPinStatus(null);
+    try {
+      const salt = generateSalt();
+      const hash = await hashPin(pinInput, salt);
+      onUpdateSettings({
+        ...settings,
+        pinHash: hash,
+        pinSalt: salt,
+        pinCode: undefined, // Clear legacy plaintext PIN
+        isPinEnabled: true,
+      });
+      setPinInput('');
+      setPinStatus('رمز عبور امن (هش‌شده) با موفقیت ذخیره شد.');
+    } catch (err) {
+      setPinStatus('خطا در رمزنگاری و ذخیره PIN.');
+    } finally {
+      setIsSavingPin(false);
+    }
+  };
+
+  const handleToggleBiometrics = async (enabled: boolean) => {
+    if (enabled) {
+      try {
+        if (
+          window.PublicKeyCredential &&
+          typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function'
+        ) {
+          const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          if (available) {
+            // Register WebAuthn credential locally if navigator.credentials.create is available
+            const challenge = new Uint8Array(32);
+            crypto.getRandomValues(challenge);
+            const userId = new Uint8Array(16);
+            crypto.getRandomValues(userId);
+
+            const credential = (await navigator.credentials.create({
+              publicKey: {
+                challenge,
+                rp: { name: 'WealthPulse' },
+                user: {
+                  id: userId,
+                  name: 'user@wealthpulse.local',
+                  displayName: 'کاربر WealthPulse',
+                },
+                pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+                authenticatorSelection: {
+                  authenticatorAttachment: 'platform',
+                  userVerification: 'required',
+                },
+                timeout: 60000,
+              },
+            })) as PublicKeyCredential | null;
+
+            if (credential) {
+              localStorage.setItem('wealthpulse_webauthn_credential_id', credential.id);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('WebAuthn registration skipped or cancelled:', err);
+      }
+    }
+    onUpdateSettings({ ...settings, isBiometricsEnabled: enabled });
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,60 +211,81 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Security & PIN Lock */}
-        <div className={`border rounded-3xl p-5 space-y-4 ${
-          isLight ? 'bg-white border-slate-200 text-slate-800 shadow-sm' : 'bg-slate-900 border-slate-800 text-slate-200'
-        }`}>
-          <h3 className={`font-bold text-sm border-b pb-2 ${
-            isLight ? 'text-slate-900 border-slate-200' : 'text-slate-100 border-slate-800'
+          {/* Security & PIN Lock */}
+          <div className={`border rounded-3xl p-5 space-y-4 ${
+            isLight ? 'bg-white border-slate-200 text-slate-800 shadow-sm' : 'bg-slate-900 border-slate-800 text-slate-200'
           }`}>
-            امنیت و قفل نرم‌افزار
-          </h3>
+            <h3 className={`font-bold text-sm border-b pb-2 ${
+              isLight ? 'text-slate-900 border-slate-200' : 'text-slate-100 border-slate-800'
+            }`}>
+              امنیت و قفل نرم‌افزار
+            </h3>
 
-          <div className={`flex items-center justify-between p-3 rounded-2xl border ${
-            isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800/60 border-slate-700'
-          }`}>
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-amber-500" />
-              <span className="font-semibold">فعال‌سازی رمز عبور (PIN)</span>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.isPinEnabled}
-              onChange={(e) =>
-                onUpdateSettings({ ...settings, isPinEnabled: e.target.checked })
-              }
-              className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-emerald-500"
-            />
-          </div>
-
-          {settings.isPinEnabled && (
-            <div>
-              <label className={`block mb-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>کد ۴ رقمی PIN</label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  maxLength={4}
-                  placeholder="۱۲۳۴"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  className={`flex-1 px-3 py-2 rounded-xl border font-mono text-center tracking-widest text-base ${
-                    isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-800 border-slate-700 text-slate-100'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    onUpdateSettings({ ...settings, pinCode: pinInput })
-                  }
-                  className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold"
-                >
-                  ذخیره PIN
-                </button>
+            <div className={`flex items-center justify-between p-3 rounded-2xl border ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800/60 border-slate-700'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-500" />
+                <span className="font-semibold">فعال‌سازی رمز عبور (PIN)</span>
               </div>
+              <input
+                type="checkbox"
+                checked={settings.isPinEnabled}
+                onChange={(e) =>
+                  onUpdateSettings({ ...settings, isPinEnabled: e.target.checked })
+                }
+                className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-emerald-500"
+              />
             </div>
-          )}
-        </div>
+
+            {settings.isPinEnabled && (
+              <div className="space-y-2">
+                <label className={`block text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  {settings.pinHash ? 'تغییر کد ۴ رقمی PIN' : 'تعیین کد ۴ رقمی PIN'}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    maxLength={4}
+                    placeholder="۱۲۳۴"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    className={`flex-1 px-3 py-2 rounded-xl border font-mono text-center tracking-widest text-base ${
+                      isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-800 border-slate-700 text-slate-100'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    disabled={isSavingPin}
+                    onClick={handleSavePin}
+                    className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 disabled:opacity-50 transition-all"
+                  >
+                    {isSavingPin ? 'در حال ذخیره...' : 'ذخیره PIN'}
+                  </button>
+                </div>
+                {pinStatus && (
+                  <p className={`text-xs ${pinStatus.includes('موفقیت') ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {pinStatus}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className={`flex items-center justify-between p-3 rounded-2xl border ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800/60 border-slate-700'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-indigo-400" />
+                <span className="font-semibold">ورود با اثر انگشت / بیومتریک</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.isBiometricsEnabled}
+                onChange={(e) => handleToggleBiometrics(e.target.checked)}
+                className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-500"
+              />
+            </div>
+          </div>
 
         {/* Backup & Data Sync */}
         <div className={`md:col-span-2 border rounded-3xl p-5 space-y-4 ${

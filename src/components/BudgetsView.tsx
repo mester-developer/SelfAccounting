@@ -33,6 +33,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [warningThresholdPercent, setWarningThresholdPercent] = useState(80);
 
+  const currentYearPrefix = getTodayIso().substring(0, 4);
   const currentMonthPrefix = getTodayIso().substring(0, 7);
 
   const openAddModal = () => {
@@ -113,13 +114,14 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
             icon: 'Tag',
           };
 
-          // Spent amount for this category in current month
+          // Spent amount for this category in current period (monthly or yearly)
+          const datePrefix = b.period === 'yearly' ? currentYearPrefix : currentMonthPrefix;
           const spentAmount = transactions
             .filter(
               (t) =>
                 t.categoryId === b.categoryId &&
                 t.type === 'expense' &&
-                t.date.startsWith(currentMonthPrefix)
+                t.date.startsWith(datePrefix)
             )
             .reduce((sum, t) => sum + t.amount, 0);
 

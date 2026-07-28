@@ -42,6 +42,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat_apparel', name: 'پوشاک و زیبایی', type: 'expense', icon: 'Shirt', color: '#14b8a6', isDefault: true },
   { id: 'cat_education', name: 'آموزش و کتاب', type: 'expense', icon: 'GraduationCap', color: '#06b6d4', isDefault: true },
   { id: 'cat_installments', name: 'اقساط و وام', type: 'expense', icon: 'CreditCard', color: '#d97706', isDefault: true },
+  { id: 'cat_savings_deposit', name: 'واریز به پس‌انداز', type: 'expense', icon: 'PiggyBank', color: '#6366f1', isDefault: true },
 
   // Income
   { id: 'cat_salary', name: 'حقوق و دستمزد', type: 'income', icon: 'Briefcase', color: '#22c55e', isDefault: true },
@@ -285,96 +286,182 @@ export const DEMO_NOTIFICATIONS: NotificationItem[] = [
 // Helper Storage API
 export const StorageAPI = {
   getAccounts(): Account[] {
-    const data = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-    return data ? JSON.parse(data) : DEFAULT_ACCOUNTS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
+      if (!data) return DEFAULT_ACCOUNTS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_ACCOUNTS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse accounts, falling back to defaults.', e);
+      return DEFAULT_ACCOUNTS;
+    }
   },
   saveAccounts(accounts: Account[]) {
     localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
   },
 
   getTransactions(): Transaction[] {
-    const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    return data ? JSON.parse(data) : DEFAULT_TRANSACTIONS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+      if (!data) return DEFAULT_TRANSACTIONS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_TRANSACTIONS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse transactions, falling back to defaults.', e);
+      return DEFAULT_TRANSACTIONS;
+    }
   },
   saveTransactions(transactions: Transaction[]) {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
   },
 
   getCategories(): Category[] {
-    const data = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-    return data ? JSON.parse(data) : DEFAULT_CATEGORIES;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+      if (!data) return DEFAULT_CATEGORIES;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_CATEGORIES;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse categories, falling back to defaults.', e);
+      return DEFAULT_CATEGORIES;
+    }
   },
   saveCategories(categories: Category[]) {
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
   },
 
   getBudgets(): Budget[] {
-    const data = localStorage.getItem(STORAGE_KEYS.BUDGETS);
-    return data ? JSON.parse(data) : DEFAULT_BUDGETS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.BUDGETS);
+      if (!data) return DEFAULT_BUDGETS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_BUDGETS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse budgets, falling back to defaults.', e);
+      return DEFAULT_BUDGETS;
+    }
   },
   saveBudgets(budgets: Budget[]) {
     localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
   },
 
   getDebts(): Debt[] {
-    const data = localStorage.getItem(STORAGE_KEYS.DEBTS);
-    return data ? JSON.parse(data) : DEFAULT_DEBTS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.DEBTS);
+      if (!data) return DEFAULT_DEBTS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_DEBTS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse debts, falling back to defaults.', e);
+      return DEFAULT_DEBTS;
+    }
   },
   saveDebts(debts: Debt[]) {
     localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(debts));
   },
 
   getLoans(): Loan[] {
-    const data = localStorage.getItem(STORAGE_KEYS.LOANS);
-    return data ? JSON.parse(data) : DEFAULT_LOANS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.LOANS);
+      if (!data) return DEFAULT_LOANS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_LOANS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse loans, falling back to defaults.', e);
+      return DEFAULT_LOANS;
+    }
   },
   saveLoans(loans: Loan[]) {
     localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(loans));
   },
 
   getCheques(): Cheque[] {
-    const data = localStorage.getItem(STORAGE_KEYS.CHEQUES);
-    return data ? JSON.parse(data) : DEFAULT_CHEQUES;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CHEQUES);
+      if (!data) return DEFAULT_CHEQUES;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_CHEQUES;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse cheques, falling back to defaults.', e);
+      return DEFAULT_CHEQUES;
+    }
   },
   saveCheques(cheques: Cheque[]) {
     localStorage.setItem(STORAGE_KEYS.CHEQUES, JSON.stringify(cheques));
   },
 
   getGoals(): FinancialGoal[] {
-    const data = localStorage.getItem(STORAGE_KEYS.GOALS);
-    return data ? JSON.parse(data) : DEFAULT_GOALS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.GOALS);
+      if (!data) return DEFAULT_GOALS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_GOALS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse goals, falling back to defaults.', e);
+      return DEFAULT_GOALS;
+    }
   },
   saveGoals(goals: FinancialGoal[]) {
     localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
   },
 
   getSubscriptions(): Subscription[] {
-    const data = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTIONS);
-    return data ? JSON.parse(data) : DEFAULT_SUBSCRIPTIONS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTIONS);
+      if (!data) return DEFAULT_SUBSCRIPTIONS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_SUBSCRIPTIONS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse subscriptions, falling back to defaults.', e);
+      return DEFAULT_SUBSCRIPTIONS;
+    }
   },
   saveSubscriptions(subs: Subscription[]) {
     localStorage.setItem(STORAGE_KEYS.SUBSCRIPTIONS, JSON.stringify(subs));
   },
 
   getInvestments(): InvestmentAsset[] {
-    const data = localStorage.getItem(STORAGE_KEYS.INVESTMENTS);
-    return data ? JSON.parse(data) : DEFAULT_INVESTMENTS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.INVESTMENTS);
+      if (!data) return DEFAULT_INVESTMENTS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_INVESTMENTS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse investments, falling back to defaults.', e);
+      return DEFAULT_INVESTMENTS;
+    }
   },
   saveInvestments(investments: InvestmentAsset[]) {
     localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(investments));
   },
 
   getSettings(): UserSettings {
-    const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    return data ? JSON.parse(data) : DEFAULT_SETTINGS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (!data) return DEFAULT_SETTINGS;
+      const parsed = JSON.parse(data);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? { ...DEFAULT_SETTINGS, ...parsed }
+        : DEFAULT_SETTINGS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse settings, falling back to defaults.', e);
+      return DEFAULT_SETTINGS;
+    }
   },
   saveSettings(settings: UserSettings) {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   },
 
   getNotifications(): NotificationItem[] {
-    const data = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-    return data ? JSON.parse(data) : DEFAULT_NOTIFICATIONS;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+      if (!data) return DEFAULT_NOTIFICATIONS;
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : DEFAULT_NOTIFICATIONS;
+    } catch (e) {
+      console.error('[StorageAPI] Failed to parse notifications, falling back to defaults.', e);
+      return DEFAULT_NOTIFICATIONS;
+    }
   },
   saveNotifications(notifs: NotificationItem[]) {
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifs));
@@ -758,13 +845,41 @@ export const StorageAPI = {
     return JSON.stringify(data, null, 2);
   },
 
-  importBackupJSON(jsonString: string): boolean {
+  importBackupJSON(jsonString: string): { success: boolean; skippedCount: number } {
     try {
       const parsed = JSON.parse(jsonString);
-      if (!parsed || typeof parsed !== 'object') return false;
+      if (!parsed || typeof parsed !== 'object') return { success: false, skippedCount: 0 };
 
-      if (Array.isArray(parsed.accounts)) this.saveAccounts(parsed.accounts);
-      if (Array.isArray(parsed.transactions)) this.saveTransactions(parsed.transactions);
+      let skippedCount = 0;
+
+      const isValidAccount = (a: any): a is Account =>
+        a &&
+        typeof a === 'object' &&
+        typeof a.id === 'string' &&
+        typeof a.name === 'string' &&
+        typeof a.balance === 'number' &&
+        isFinite(a.balance);
+
+      const isValidTransaction = (t: any): t is Transaction =>
+        t &&
+        typeof t === 'object' &&
+        typeof t.id === 'string' &&
+        typeof t.amount === 'number' &&
+        isFinite(t.amount) &&
+        typeof t.accountId === 'string' &&
+        typeof t.date === 'string' &&
+        ['income', 'expense', 'transfer', 'refund'].includes(t.type);
+
+      if (Array.isArray(parsed.accounts)) {
+        const validAccounts = parsed.accounts.filter(isValidAccount);
+        skippedCount += parsed.accounts.length - validAccounts.length;
+        this.saveAccounts(validAccounts);
+      }
+      if (Array.isArray(parsed.transactions)) {
+        const validTransactions = parsed.transactions.filter(isValidTransaction);
+        skippedCount += parsed.transactions.length - validTransactions.length;
+        this.saveTransactions(validTransactions);
+      }
       if (Array.isArray(parsed.categories)) this.saveCategories(parsed.categories);
       if (Array.isArray(parsed.budgets)) this.saveBudgets(parsed.budgets);
       if (Array.isArray(parsed.debts)) this.saveDebts(parsed.debts);
@@ -774,9 +889,10 @@ export const StorageAPI = {
       if (Array.isArray(parsed.subscriptions)) this.saveSubscriptions(parsed.subscriptions);
       if (Array.isArray(parsed.investments)) this.saveInvestments(parsed.investments);
       if (parsed.settings && typeof parsed.settings === 'object') this.saveSettings(parsed.settings);
-      return true;
+
+      return { success: true, skippedCount };
     } catch (e) {
-      return false;
+      return { success: false, skippedCount: 0 };
     }
   },
 };

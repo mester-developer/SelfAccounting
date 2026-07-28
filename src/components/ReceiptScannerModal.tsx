@@ -81,17 +81,28 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
   const handleApply = () => {
     if (!parsedData) return;
 
+    const catSearchStr = (
+      parsedData.category ||
+      parsedData.merchantName ||
+      parsedData.merchant ||
+      ''
+    ).toLowerCase();
+
     const matchedCat =
-      categories.find((c) =>
-        c.name.includes(parsedData.merchantName || 'خرید')
-      )?.id || categories[0]?.id;
+      categories.find(
+        (c) =>
+          catSearchStr.includes(c.name.toLowerCase()) ||
+          c.name.toLowerCase().includes(catSearchStr)
+      )?.id ||
+      categories.find((c) => c.type === 'expense')?.id ||
+      categories[0]?.id;
 
     onScanComplete({
       amount: parsedData.amount || 100000,
       categoryId: matchedCat,
       accountId: accounts[0]?.id || '',
-      description: parsedData.description || 'خرید فاکتور اسکن‌شده',
-      merchantName: parsedData.merchantName || 'فروشگاه',
+      description: parsedData.description || parsedData.note || 'خرید فاکتور اسکن‌شده',
+      merchantName: parsedData.merchantName || parsedData.merchant || 'فروشگاه',
       date: parsedData.date || new Date().toISOString().split('T')[0],
     });
 

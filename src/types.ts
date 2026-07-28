@@ -160,7 +160,9 @@ export interface UserSettings {
   currency: 'TOMAN' | 'IRR' | 'USD' | 'EUR';
   language: 'fa' | 'en';
   dateFormat: 'jalali' | 'gregorian';
-  pinCode?: string;
+  pinCode?: string; // DEPRECATED - kept for auto-migration
+  pinHash?: string;
+  pinSalt?: string;
   isPinEnabled: boolean;
   isBiometricsEnabled: boolean;
   enableNotifications: boolean;

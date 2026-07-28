@@ -35,6 +35,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [date, setDate] = useState(getTodayIso());
   const [description, setDescription] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -64,8 +65,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     const cleanAmt = parseFloat(toEnglishDigits(amount));
-    if (!cleanAmt || cleanAmt <= 0) return;
+    if (!cleanAmt || cleanAmt <= 0) {
+      setFormError('لطفا یک مبلغ معتبر وارد کنید.');
+      return;
+    }
+
+    if (type === 'transfer' && accountId === toAccountId) {
+      setFormError('حساب مبداء و مقصد انتقال نمی‌توانند یکسان باشند.');
+      return;
+    }
 
     const tags = tagsInput
       .split(',')
@@ -296,6 +307,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               className="w-full px-3 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
             />
           </div>
+
+          {formError && (
+            <p className="text-rose-400 text-xs font-semibold px-1">
+              {formError}
+            </p>
+          )}
 
           <div className="pt-2">
             <button

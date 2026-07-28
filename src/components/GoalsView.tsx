@@ -106,7 +106,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
         type: 'expense',
         amount: amt,
         accountId: selectedAccountId,
-        categoryId: 'cat_investment_returns',
+        categoryId: 'cat_savings_deposit',
         date: getTodayIso(),
         note: `واریز به هدف پس‌انداز: ${depositModalGoal.title}`,
         tags: ['پس‌انداز', 'هدف'],

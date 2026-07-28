@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Debt, Loan, Cheque, UserSettings } from '../types';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, toEnglishDigits } from '../utils/formatters';
+import { AmountInput } from './AmountInput';
 import {
   HandCoins,
   Building2,
@@ -51,6 +52,9 @@ export const DebtsAndLoansView: React.FC<DebtsAndLoansViewProps> = ({
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
   const [isChequeModalOpen, setIsChequeModalOpen] = useState(false);
+  const [repayDebtItem, setRepayDebtItem] = useState<Debt | null>(null);
+  const [repayAmount, setRepayAmount] = useState('');
+  const [repayError, setRepayError] = useState('');
 
   // Debt Form
   const [personName, setPersonName] = useState('');
@@ -263,18 +267,9 @@ export const DebtsAndLoansView: React.FC<DebtsAndLoansViewProps> = ({
                 {onUpdateDebt && d.paidAmount < d.totalAmount && (
                   <button
                     onClick={() => {
-                      const amountStr = prompt('مبلغ پرداختی جدید (تومان):', (d.totalAmount - d.paidAmount).toString());
-                      if (amountStr) {
-                        const amt = parseFloat(amountStr);
-                        if (!isNaN(amt) && amt > 0) {
-                          const newPaid = d.paidAmount + amt;
-                          onUpdateDebt({
-                            ...d,
-                            paidAmount: newPaid,
-                            status: newPaid >= d.totalAmount ? 'settled' : 'active',
-                          });
-                        }
-                      }
+                      setRepayDebtItem(d);
+                      setRepayAmount((d.totalAmount - d.paidAmount).toString());
+                      setRepayError('');
                     }}
                     className="w-full py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-semibold text-xs border border-indigo-500/30 transition-all flex items-center justify-center gap-1.5"
                   >
@@ -679,6 +674,83 @@ export const DebtsAndLoansView: React.FC<DebtsAndLoansViewProps> = ({
                   className="w-full py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold transition-all shadow-lg shadow-indigo-500/25"
                 >
                   ذخیره چک
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Repay Debt Modal */}
+      {repayDebtItem && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl p-6 w-full max-w-sm text-slate-100 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="font-bold text-sm text-white">
+                ثبت پرداخت برای {repayDebtItem.personName}
+              </h3>
+              <button
+                onClick={() => setRepayDebtItem(null)}
+                className="p-1 rounded-xl bg-white/10 text-slate-400 hover:text-white border border-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const amt = parseFloat(toEnglishDigits(repayAmount));
+                const remaining = repayDebtItem.totalAmount - repayDebtItem.paidAmount;
+
+                if (isNaN(amt) || amt <= 0) {
+                  setRepayError('لطفا یک مبلغ معتبر وارد کنید.');
+                  return;
+                }
+                if (amt > remaining) {
+                  setRepayError(
+                    `مبلغ پرداختی نمی‌تواند بیشتر از باقیمانده طلب/بدهی (${formatCurrency(remaining, settings.currency)}) باشد.`
+                  );
+                  return;
+                }
+
+                if (onUpdateDebt) {
+                  const newPaid = repayDebtItem.paidAmount + amt;
+                  onUpdateDebt({
+                    ...repayDebtItem,
+                    paidAmount: newPaid,
+                    status: newPaid >= repayDebtItem.totalAmount ? 'completed' : 'active',
+                  });
+                }
+                setRepayDebtItem(null);
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  مبلغ پرداختی جدید ({settings.currency === 'IRR' ? 'ریال' : 'تومان'})
+                </label>
+                <AmountInput
+                  value={repayAmount}
+                  onChange={(val) => {
+                    setRepayAmount(val);
+                    setRepayError('');
+                  }}
+                  placeholder="مبلغ پرداختی"
+                />
+              </div>
+
+              {repayError && (
+                <p className="text-rose-400 text-xs font-semibold leading-relaxed">
+                  {repayError}
+                </p>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold transition-all shadow-lg shadow-indigo-500/25"
+                >
+                  ثبت تسویه
                 </button>
               </div>
             </form>

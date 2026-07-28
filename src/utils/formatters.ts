@@ -156,3 +156,12 @@ export function getTodayIso(): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+// Group balances by currency code
+export function groupBalancesByCurrency(accounts: { balance: number; currency: string }[]): Record<string, number> {
+  return (accounts || []).reduce((acc, a) => {
+    if (!a || !a.currency) return acc;
+    acc[a.currency] = (acc[a.currency] || 0) + (a.balance || 0);
+    return acc;
+  }, {} as Record<string, number>);
+}

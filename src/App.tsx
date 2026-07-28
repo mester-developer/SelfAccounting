@@ -234,9 +234,13 @@ export function App() {
   };
 
   const handleImportBackup = (jsonStr: string) => {
-    const success = StorageAPI.importBackupJSON(jsonStr);
-    if (success) {
-      alert('اطلاعات با موفقیت بازیابی شد.');
+    const res = StorageAPI.importBackupJSON(jsonStr);
+    if (res.success) {
+      if (res.skippedCount > 0) {
+        alert(`اطلاعات با موفقیت بازیابی شد. (${res.skippedCount} آیتم نامعتبر نادیده گرفته شد)`);
+      } else {
+        alert('اطلاعات با موفقیت بازیابی شد.');
+      }
       window.location.reload();
     } else {
       alert('خطا در فایل پشتیبان. فرمت نامعتبر است.');
@@ -274,7 +278,8 @@ export function App() {
   if (isLocked) {
     return (
       <SecurityLockModal
-        pinCode={settings.pinCode}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
         onUnlock={() => setIsLocked(false)}
       />
     );
@@ -351,6 +356,7 @@ export function App() {
           {activeTab === 'accounts' && (
             <AccountsView
               accounts={accounts}
+              transactions={transactions}
               settings={settings}
               onAddAccount={handleAddAccount}
               onUpdateAccount={handleUpdateAccount}
